@@ -18,7 +18,7 @@ describe("Appointment Controller", () => {
   // ─── createAppointment ────────────────────────────────────────────
 
   describe("createAppointment", () => {
-    it("should set req.body.patient from req.user and return 201", async () => {
+    it("should pass patient id from req.user (not the body) and return 201", async () => {
       const req = {
         user: { userId: "user123" },
         body: { doctor: "doc1", date: "2026-04-01", time: "10:00" },
@@ -31,8 +31,7 @@ describe("Appointment Controller", () => {
 
       await controller.createAppointment(req, res, next);
 
-      expect(req.body.patient).toBe("user123");
-      expect(appointmentService.createAppointment).toHaveBeenCalledWith(req.body);
+      expect(appointmentService.createAppointment).toHaveBeenCalledWith(req.body, "user123");
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });

@@ -106,6 +106,35 @@ describe("Appointment Service", () => {
 
       expect(result).toBeDefined();
     });
+
+    it("should ignore server-controlled fields in the body (mass assignment)", async () => {
+      Appointment.findOne.mockResolvedValue(null);
+      Appointment.create.mockResolvedValue(mockPopulatedAppointment);
+      Appointment.findById.mockReturnValue({
+        populate: jest.fn().mockResolvedValue(mockPopulatedAppointment),
+      });
+      const patientId = new mongoose.Types.ObjectId();
+
+      await appointmentService.createAppointment(
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: "2026-03-01",
+          time: "10:00",
+          consultationType: "video",
+          status: "confirmed",
+          reminderSent: true,
+          meetingUrl: "https://evil.example/x",
+        },
+        patientId
+      );
+
+      const saved = Appointment.create.mock.calls[0][0];
+      expect(saved.patient).toBe(patientId);
+      expect(saved).not.toHaveProperty("status");
+      expect(saved).not.toHaveProperty("reminderSent");
+      expect(saved).not.toHaveProperty("meetingUrl");
+    });
   });
 
   // ─── getAppointments ────────────────────────────────────────────────
@@ -256,6 +285,34 @@ describe("Appointment Service", () => {
 
       expect(mockAppt.save).toHaveBeenCalled();
       expect(result).toBeDefined();
+    });
+
+    it("should not let the body change doctor, patient or status (mass assignment)", async () => {
+      const originalDoctor = new mongoose.Types.ObjectId();
+      const originalPatient = new mongoose.Types.ObjectId();
+      const mockAppt = {
+        _id: new mongoose.Types.ObjectId(),
+        status: "pending",
+        doctor: originalDoctor,
+        patient: originalPatient,
+        save: jest.fn().mockResolvedValue(true),
+        populate: jest.fn().mockReturnThis(),
+      };
+      Appointment.findById.mockResolvedValue(mockAppt);
+
+      await appointmentService.updateAppointment(mockAppt._id, {
+        symptoms: "Headache",
+        status: "confirmed",
+        doctor: new mongoose.Types.ObjectId(),
+        patient: new mongoose.Types.ObjectId(),
+        meetingUrl: "https://evil.example/x",
+      });
+
+      expect(mockAppt.symptoms).toBe("Headache");
+      expect(mockAppt.status).toBe("pending");
+      expect(mockAppt.doctor).toBe(originalDoctor);
+      expect(mockAppt.patient).toBe(originalPatient);
+      expect(mockAppt.meetingUrl).toBeUndefined();
     });
 
     it("should throw 404 when appointment not found", async () => {

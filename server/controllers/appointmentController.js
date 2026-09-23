@@ -2,8 +2,9 @@ const appointmentService = require("../services/appointmentService");
 
 const createAppointment = async (req, res, next) => {
   try {
-    req.body.patient = req.user.userId;
-    const appointment = await appointmentService.createAppointment(req.body);
+    // SECURITY (V2): the owner is the authenticated user from the JWT (set by
+    // authMiddleware), passed separately instead of trusting req.body.patient.
+    const appointment = await appointmentService.createAppointment(req.body, req.user.userId);
     res.status(201).json({ success: true, data: appointment });
   } catch (error) {
     next(error);

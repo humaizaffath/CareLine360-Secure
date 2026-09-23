@@ -23,6 +23,34 @@ const VALID_TRANSITIONS = {
   confirmed: ["completed", "cancelled"],
 };
 
+// SECURITY (V2): Mass Assignment mitigation – CWE-915 / OWASP A08:2021.
+// Previously the whole request body was saved (Appointment.create(req.body) and
+// Object.assign(appointment, req.body)), so a patient could set fields the server
+// must own. These allow-lists name the ONLY fields a patient may supply; anything
+// not listed is dropped. Server-controlled fields that are therefore rejected:
+//   status             – starts as "pending"; changed only by a doctor via /status
+//   patient            – always taken from the authenticated JWT
+//   meetingUrl         – generated server-side by the meeting services
+//   reminderSent       – managed by the reminder scheduler
+//   cancellationReason – set only through the /cancel endpoint
+//   rescheduleHistory  – appended only through the /reschedule endpoint
+const CREATE_FIELDS = ["doctor", "date", "time", "consultationType", "symptoms", "notes", "priority"];
+
+// Update is stricter than create: the patient chooses a doctor when booking, but
+// may not reassign an existing appointment to a different doctor afterwards.
+const UPDATE_FIELDS = ["date", "time", "consultationType", "symptoms", "notes", "priority"];
+
+// Builds a new object containing only allow-listed keys. Using an allow-list
+// (rather than deleting known-bad keys) means any unexpected or future property
+// in the request body never reaches the Mongoose document.
+const pickFields = (data, allowed) => {
+  const picked = {};
+  for (const key of allowed) {
+    if (data[key] !== undefined) picked[key] = data[key];
+  }
+  return picked;
+};
+
 const checkDoubleBooking = async (doctorId, date, time, excludeId = null) => {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
@@ -44,7 +72,11 @@ const checkDoubleBooking = async (doctorId, date, time, excludeId = null) => {
   return !!existing;
 };
 
-const createAppointment = async (data) => {
+const createAppointment = async (body, patientId) => {
+  // SECURITY (V2): patient comes from the verified JWT (passed in by the controller)
+  // and is applied last, so a "patient" key in the body can never set the owner.
+  const data = { ...pickFields(body, CREATE_FIELDS), patient: patientId };
+
   const isBooked = await checkDoubleBooking(data.doctor, data.date, data.time);
   if (isBooked) {
     const error = new Error("Doctor already has an appointment at this date and time");
@@ -126,7 +158,9 @@ const getAppointmentById = async (id) => {
   return appointment;
 };
 
-const updateAppointment = async (id, data) => {
+const updateAppointment = async (id, body) => {
+  // SECURITY (V2): only allow-listed fields are passed to Object.assign below.
+  const data = pickFields(body, UPDATE_FIELDS);
   const appointment = await Appointment.findById(id);
   if (!appointment) {
     const error = new Error("Appointment not found");
