@@ -1,27 +1,30 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: Number(process.env.SMTP_PORT) === 465,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 const sendEmail = async ({ to, subject, html }) => {
   const recipient = process.env.EMAIL_OVERRIDE_TO || to;
   if (!recipient) return null;
   try {
-    const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
     console.log(`[Email] from=${from} to=${recipient} subject="${subject}"`);
-    const { data, error } = await resend.emails.send({
+    const info = await transporter.sendMail({
       from: `CareLine360 <${from}>`,
       to: recipient,
       subject,
       html,
     });
 
-    if (error) {
-      console.error("Resend error:", error);
-      return null;
-    }
-
-    console.log("Email sent:", data.id);
-    return data;
+    console.log("Email sent:", info.messageId);
+    return info;
   } catch (error) {
     console.error("Email send error:", error.message);
   }
