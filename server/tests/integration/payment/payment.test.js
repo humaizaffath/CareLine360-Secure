@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const express = require("express");
 const request = require("supertest");
+const jwt = require("jsonwebtoken");
 
 const Payment = require("../../../models/Payment");
 const Appointment = require("../../../models/Appointment");
@@ -12,10 +13,20 @@ const errorHandler = require("../../../middleware/errorHandler");
 let mongoServer;
 let app;
 let patient, doctor, appointment;
+let asPatient; // supertest client authenticated as the appointment's patient
+
+// Returns get/post/patch helpers that attach a Bearer token for `user`.
+const authedClient = (user) => {
+  const token = jwt.sign({ userId: user._id.toString(), role: user.role }, process.env.JWT_ACCESS_SECRET);
+  return Object.fromEntries(
+    ["get", "post", "patch"].map((m) => [m, (url) => request(app)[m](url).set("Authorization", `Bearer ${token}`)])
+  );
+};
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   await mongoose.connect(mongoServer.getUri());
+  process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-secret";
 
   app = express();
   app.use(express.json());
@@ -41,6 +52,7 @@ beforeAll(async () => {
     time: "10:00",
     consultationType: "video",
   });
+  asPatient = authedClient(patient);
 }, 30000);
 
 afterAll(async () => {
@@ -63,7 +75,7 @@ describe("Payment API", () => {
 
   describe("POST /api/payments", () => {
     it("should create a payment", async () => {
-      const res = await request(app)
+      const res = await asPatient
         .post("/api/payments")
         .send(validPayment())
         .expect(201);
@@ -74,9 +86,9 @@ describe("Payment API", () => {
     });
 
     it("should prevent duplicate payment for same appointment", async () => {
-      await request(app).post("/api/payments").send(validPayment());
+      await asPatient.post("/api/payments").send(validPayment());
 
-      const res = await request(app)
+      const res = await asPatient
         .post("/api/payments")
         .send(validPayment())
         .expect(409);
@@ -85,7 +97,7 @@ describe("Payment API", () => {
     });
 
     it("should reject invalid data", async () => {
-      const res = await request(app)
+      const res = await asPatient
         .post("/api/payments")
         .send({ appointment: "bad" })
         .expect(400);
@@ -96,7 +108,7 @@ describe("Payment API", () => {
     it("should reject missing amount", async () => {
       const body = validPayment();
       delete body.amount;
-      const res = await request(app)
+      const res = await asPatient
         .post("/api/payments")
         .send(body)
         .expect(400);
@@ -109,10 +121,10 @@ describe("Payment API", () => {
 
   describe("GET /api/payments/:id", () => {
     it("should fetch payment by ID", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       const id = createRes.body.data._id;
 
-      const res = await request(app)
+      const res = await asPatient
         .get(`/api/payments/${id}`)
         .expect(200);
 
@@ -122,7 +134,7 @@ describe("Payment API", () => {
 
     it("should return 404 for non-existent payment", async () => {
       const fakeId = new mongoose.Types.ObjectId();
-      const res = await request(app)
+      const res = await asPatient
         .get(`/api/payments/${fakeId}`)
         .expect(404);
 
@@ -130,7 +142,7 @@ describe("Payment API", () => {
     });
 
     it("should return 400 for invalid ID format", async () => {
-      await request(app)
+      await asPatient
         .get("/api/payments/not-valid-id")
         .expect(400);
     });
@@ -140,9 +152,9 @@ describe("Payment API", () => {
 
   describe("GET /api/payments/appointment/:appointmentId", () => {
     it("should fetch payment by appointment ID", async () => {
-      await request(app).post("/api/payments").send(validPayment());
+      await asPatient.post("/api/payments").send(validPayment());
 
-      const res = await request(app)
+      const res = await asPatient
         .get(`/api/payments/appointment/${appointment._id}`)
         .expect(200);
 
@@ -152,7 +164,7 @@ describe("Payment API", () => {
 
     it("should return 404 when no payment for appointment", async () => {
       const fakeApptId = new mongoose.Types.ObjectId();
-      const res = await request(app)
+      const res = await asPatient
         .get(`/api/payments/appointment/${fakeApptId}`)
         .expect(404);
 
@@ -164,10 +176,10 @@ describe("Payment API", () => {
 
   describe("PATCH /api/payments/:id/verify", () => {
     it("should verify a pending payment", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       const id = createRes.body.data._id;
 
-      const res = await request(app)
+      const res = await asPatient
         .patch(`/api/payments/${id}/verify`)
         .expect(200);
 
@@ -177,12 +189,12 @@ describe("Payment API", () => {
     });
 
     it("should reject verifying an already verified payment", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       const id = createRes.body.data._id;
 
-      await request(app).patch(`/api/payments/${id}/verify`);
+      await asPatient.patch(`/api/payments/${id}/verify`);
 
-      const res = await request(app)
+      const res = await asPatient
         .patch(`/api/payments/${id}/verify`)
         .expect(400);
 
@@ -190,7 +202,7 @@ describe("Payment API", () => {
     });
 
     it("should return 400 for invalid ID format", async () => {
-      await request(app)
+      await asPatient
         .patch("/api/payments/bad-id/verify")
         .expect(400);
     });
@@ -200,10 +212,10 @@ describe("Payment API", () => {
 
   describe("PATCH /api/payments/:id/fail", () => {
     it("should fail a pending payment", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       const id = createRes.body.data._id;
 
-      const res = await request(app)
+      const res = await asPatient
         .patch(`/api/payments/${id}/fail`)
         .expect(200);
 
@@ -211,12 +223,12 @@ describe("Payment API", () => {
     });
 
     it("should reject failing a verified payment", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       const id = createRes.body.data._id;
 
-      await request(app).patch(`/api/payments/${id}/verify`);
+      await asPatient.patch(`/api/payments/${id}/verify`);
 
-      const res = await request(app)
+      const res = await asPatient
         .patch(`/api/payments/${id}/fail`)
         .expect(400);
 
@@ -228,19 +240,19 @@ describe("Payment API", () => {
 
   describe("Full Lifecycle", () => {
     it("should complete: create → verify", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       expect(createRes.body.data.status).toBe("pending");
 
-      const verifyRes = await request(app)
+      const verifyRes = await asPatient
         .patch(`/api/payments/${createRes.body.data._id}/verify`);
       expect(verifyRes.body.data.status).toBe("verified");
     });
 
     it("should complete: create → fail", async () => {
-      const createRes = await request(app).post("/api/payments").send(validPayment());
+      const createRes = await asPatient.post("/api/payments").send(validPayment());
       expect(createRes.body.data.status).toBe("pending");
 
-      const failRes = await request(app)
+      const failRes = await asPatient
         .patch(`/api/payments/${createRes.body.data._id}/fail`);
       expect(failRes.body.data.status).toBe("failed");
     });

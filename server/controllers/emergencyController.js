@@ -2,7 +2,15 @@ const emergencyService = require('../services/emergencyService');
 
 const createEmergency = async (req, res, next) => {
     try {
-        const emergency = await emergencyService.createEmergency(req.body);
+        // The case is always raised for the authenticated patient; a client-supplied
+        // `patient` is ignored so one user cannot file (or spoof) an SOS for another.
+        const { description, latitude, longitude } = req.body;
+        const emergency = await emergencyService.createEmergency({
+            patient: req.user.userId,
+            description,
+            latitude,
+            longitude,
+        });
         res.status(201).json({ success: true, data: emergency });
     } catch (error) {
         next(error);

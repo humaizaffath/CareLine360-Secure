@@ -3,6 +3,9 @@ jest.mock("../../../services/paymentService");
 const paymentService = require("../../../services/paymentService");
 const controller = require("../../../controllers/paymentController");
 
+// Authenticated caller set by authMiddleware; forwarded to the service for access checks.
+const user = { userId: "user1", role: "patient" };
+
 const mockRes = () => {
   const res = {};
   res.status = jest.fn().mockReturnValue(res);
@@ -19,7 +22,7 @@ describe("Payment Controller", () => {
 
   describe("createPayment", () => {
     it("should create payment and return 201", async () => {
-      const req = { body: { appointment: "appt1", patient: "p1", amount: 3500 } };
+      const req = { user, body: { appointment: "appt1", patient: "p1", amount: 3500 } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -28,13 +31,13 @@ describe("Payment Controller", () => {
 
       await controller.createPayment(req, res, next);
 
-      expect(paymentService.createPayment).toHaveBeenCalledWith(req.body);
+      expect(paymentService.createPayment).toHaveBeenCalledWith(req.body, user);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockPayment });
     });
 
     it("should forward errors via next", async () => {
-      const req = { body: {} };
+      const req = { user, body: {} };
       const res = mockRes();
       const next = jest.fn();
       const error = new Error("fail");
@@ -51,7 +54,7 @@ describe("Payment Controller", () => {
 
   describe("getPaymentById", () => {
     it("should return payment by ID", async () => {
-      const req = { params: { id: "pay1" } };
+      const req = { user, params: { id: "pay1" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -60,11 +63,12 @@ describe("Payment Controller", () => {
 
       await controller.getPaymentById(req, res, next);
 
+      expect(paymentService.getPaymentById).toHaveBeenCalledWith("pay1", user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockPayment });
     });
 
     it("should forward errors via next", async () => {
-      const req = { params: { id: "bad" } };
+      const req = { user, params: { id: "bad" } };
       const res = mockRes();
       const next = jest.fn();
       const error = new Error("not found");
@@ -81,7 +85,7 @@ describe("Payment Controller", () => {
 
   describe("getPaymentByAppointment", () => {
     it("should return payment by appointment ID", async () => {
-      const req = { params: { appointmentId: "appt1" } };
+      const req = { user, params: { appointmentId: "appt1" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -90,12 +94,12 @@ describe("Payment Controller", () => {
 
       await controller.getPaymentByAppointment(req, res, next);
 
-      expect(paymentService.getPaymentByAppointment).toHaveBeenCalledWith("appt1");
+      expect(paymentService.getPaymentByAppointment).toHaveBeenCalledWith("appt1", user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockPayment });
     });
 
     it("should forward errors via next", async () => {
-      const req = { params: { appointmentId: "bad" } };
+      const req = { user, params: { appointmentId: "bad" } };
       const res = mockRes();
       const next = jest.fn();
       const error = new Error("not found");
@@ -112,7 +116,7 @@ describe("Payment Controller", () => {
 
   describe("verifyPayment", () => {
     it("should verify payment and return result", async () => {
-      const req = { params: { id: "pay1" } };
+      const req = { user, params: { id: "pay1" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -121,12 +125,12 @@ describe("Payment Controller", () => {
 
       await controller.verifyPayment(req, res, next);
 
-      expect(paymentService.verifyPayment).toHaveBeenCalledWith("pay1");
+      expect(paymentService.verifyPayment).toHaveBeenCalledWith("pay1", user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockPayment });
     });
 
     it("should forward errors via next", async () => {
-      const req = { params: { id: "pay1" } };
+      const req = { user, params: { id: "pay1" } };
       const res = mockRes();
       const next = jest.fn();
       const error = new Error("fail");
@@ -143,7 +147,7 @@ describe("Payment Controller", () => {
 
   describe("failPayment", () => {
     it("should fail payment and return result", async () => {
-      const req = { params: { id: "pay1" } };
+      const req = { user, params: { id: "pay1" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -152,12 +156,12 @@ describe("Payment Controller", () => {
 
       await controller.failPayment(req, res, next);
 
-      expect(paymentService.failPayment).toHaveBeenCalledWith("pay1");
+      expect(paymentService.failPayment).toHaveBeenCalledWith("pay1", user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockPayment });
     });
 
     it("should forward errors via next", async () => {
-      const req = { params: { id: "pay1" } };
+      const req = { user, params: { id: "pay1" } };
       const res = mockRes();
       const next = jest.fn();
       const error = new Error("fail");

@@ -1,0 +1,8 @@
+{
+  "name": "v4-socket-poc",
+  "private": true,
+  "description": "Standalone socket.io-client PoC for V4 (kept separate from server/package.json)",
+  "dependencies": {
+    "socket.io-client": "4.8.3"
+  }
+}

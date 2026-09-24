@@ -1,0 +1,15 @@
+{
+  "label": "after",
+  "scenario": "patient A (not a participant) emits join_room with patient B's appointment id",
+  "attackerReceived": [
+    {
+      "event": "join_error"
+    }
+  ],
+  "victimReceivedSpoofedTypingFromA": false,
+  "attackerReceivedPrivateMessage": false,
+  "attackerJoinConfirmed": false,
+  "unauthenticatedSocket": "rejected (Authentication error: no token)",
+  "deactivatedUserSocket": "rejected (Authentication error: account is deactivated)",
+  "note": "Message text, user ids and tokens are intentionally not recorded."
+}

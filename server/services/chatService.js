@@ -168,4 +168,4 @@ const getUnreadCount = async ({ userId }) => {
   return { status: 200, data: { unreadCount: count } };
 };
 
-module.exports = { getMessages, sendMessage, getUnreadCount };
+module.exports = { getMessages, sendMessage, getUnreadCount, validateChatAccess };
