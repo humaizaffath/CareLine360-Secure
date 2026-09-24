@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
-import { setAuth } from "../auth/authStorage";
+import { useAuth } from "../context/AuthContext";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import "./Auth.css";
 
 export default function Login() {
   const nav = useNavigate();
+  const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +42,7 @@ export default function Login() {
         password,
       });
 
-      setAuth(res.data);
+      login(res.data);
 
       const role = res.data.user.role;
       if (role === "patient") nav("/patient/dashboard");
