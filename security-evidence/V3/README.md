@@ -57,4 +57,6 @@ npx jest tests/integration/security/v3-auth-exposure.test.js --forceExit
 npx jest tests/unit/payment tests/integration/payment --forceExit
 ```
 
+Note: `server.js` registers an upload error handler before `middleware/errorHandler` that answers every error with 500 (part of deferred V5). The payment controller therefore sends its own 4xx errors, such as the 403 from the access check, instead of relying on the global handler. The V3 test app reproduces that error chain.
+
 `tests/integration/security/v3-auth-exposure.test.js` covers unauthenticated requests (401), allowed roles and owners (2xx), disallowed roles and non-owners (403, with no state change), and the absence of `passwordHash`/`refreshTokenHash` in successful responses. Against the pre-fix code, 28 of its 32 tests fail.

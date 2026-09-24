@@ -79,12 +79,14 @@ beforeAll(async () => {
   await mongoose.connect(mongoServer.getUri());
   process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-secret";
 
-  // Mounted exactly as in server.js
+  // Mounted as in server.js, including its upload error handler that runs
+  // before errorHandler and answers any error it receives with 500.
   app = express();
   app.use(express.json());
   app.use("/api/emergency", emergencyRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/payments", paymentRoutes);
+  app.use((err, req, res, next) => res.status(500).json({ message: err.message || "Internal server error" }));
   app.use(errorHandler);
 
   admin = await makeUser("admin", "admin@v3.test");
