@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const express = require("express");
 const request = require("supertest");
+const jwt = require("jsonwebtoken");
 
 const User = require("../../../models/User");
 const Appointment = require("../../../models/Appointment");
@@ -29,10 +30,12 @@ jest.mock("../../../config/cloudinary", () => ({
 let mongoServer;
 let app;
 let patient, doctor, doctorProfile;
+let asPatient; // supertest client authenticated as the paying patient
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   await mongoose.connect(mongoServer.getUri());
+  process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-secret";
 
   app = express();
   app.use(express.json());
@@ -58,6 +61,9 @@ beforeAll(async () => {
     fullName: "Test Doctor",
     specialization: "General",
   });
+
+  const token = jwt.sign({ userId: patient._id.toString(), role: "patient" }, process.env.JWT_ACCESS_SECRET);
+  asPatient = { get: (url) => request(app).get(url).set("Authorization", `Bearer ${token}`) };
 }, 30000);
 
 afterAll(async () => {
@@ -92,7 +98,7 @@ describe("Payment Receipt Integration", () => {
       verifiedAt: new Date(),
     });
 
-    const res = await request(app)
+    const res = await asPatient
       .get(`/api/payments/${payment._id}/receipt`);
 
     expect(res.status).toBe(200);
@@ -119,7 +125,7 @@ describe("Payment Receipt Integration", () => {
       status: "pending",
     });
 
-    const res = await request(app)
+    const res = await asPatient
       .get(`/api/payments/${payment._id}/receipt`);
 
     expect(res.status).toBe(400);

@@ -1,0 +1,233 @@
+[
+  {
+    "id": "S0",
+    "testCase": "Precondition: real login stored refreshTokenHash in DB",
+    "expected": "present",
+    "actual": "present",
+    "result": "PASS"
+  },
+  {
+    "id": "U1",
+    "testCase": "GET /api/users, no token",
+    "expected": "401",
+    "actual": 401,
+    "result": "PASS"
+  },
+  {
+    "id": "U2",
+    "testCase": "GET /api/users as admin (ManageUsers/UserContext)",
+    "expected": "200, 6 users, no hashes",
+    "actual": "200, 6 users, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "U3",
+    "testCase": "GET /api/users?role=doctor as patient (booking page)",
+    "expected": "200, 2 doctors, keys _id,email,fullName,role",
+    "actual": "200, 2 doctors, keys _id,email,fullName,role",
+    "result": "PASS"
+  },
+  {
+    "id": "U4",
+    "testCase": "GET /api/users (all) as patient",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "U5",
+    "testCase": "GET /api/users/:self as patient",
+    "expected": "200, no hashes",
+    "actual": "200, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "U6",
+    "testCase": "GET /api/users/:other as patient",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "U7",
+    "testCase": "GET /api/auth/me (regression)",
+    "expected": "200",
+    "actual": 200,
+    "result": "PASS"
+  },
+  {
+    "id": "E1",
+    "testCase": "GET /api/emergency, no token",
+    "expected": "401",
+    "actual": 401,
+    "result": "PASS"
+  },
+  {
+    "id": "E2",
+    "testCase": "POST /api/emergency as patient (SOS button body, spoofed patient id)",
+    "expected": "201, recorded for caller",
+    "actual": "201, patient=caller",
+    "result": "PASS"
+  },
+  {
+    "id": "E3",
+    "testCase": "GET /api/emergency as responder (monitoring page fields)",
+    "expected": "200, patient.fullName/phone present, no hashes",
+    "actual": "200, 2 cases, fullName=true, phone=true, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "E4",
+    "testCase": "PATCH /api/emergency/:id/status as admin",
+    "expected": "200, DISPATCHED",
+    "actual": "200, DISPATCHED",
+    "result": "PASS"
+  },
+  {
+    "id": "E5",
+    "testCase": "GET nearest-hospital as responder (EmergencyMap)",
+    "expected": "200",
+    "actual": 200,
+    "result": "PASS"
+  },
+  {
+    "id": "E6",
+    "testCase": "GET /api/emergency as patient",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "E7",
+    "testCase": "PATCH status as doctor",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "P1",
+    "testCase": "POST /api/payments, no token",
+    "expected": "401",
+    "actual": 401,
+    "result": "PASS"
+  },
+  {
+    "id": "P2",
+    "testCase": "POST /api/payments as owning patient (PaymentPage body)",
+    "expected": "201, pending, no hashes",
+    "actual": "201, pending, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "P3",
+    "testCase": "PATCH verify as owning patient (PaymentPage)",
+    "expected": "200, verified, transactionRef set, no hashes",
+    "actual": "200, verified, ref=true, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "P4",
+    "testCase": "GET payment by appointment as patient (AppointmentDetail fields)",
+    "expected": "200, client fields present, no hashes",
+    "actual": "200, fields=true, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "P5",
+    "testCase": "GET payment by appointment as appointment's doctor",
+    "expected": "200, no hashes",
+    "actual": "200, hashes=false",
+    "result": "PASS"
+  },
+  {
+    "id": "P6",
+    "testCase": "GET another patient's payment",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "P7",
+    "testCase": "GET payment as responder",
+    "expected": "403",
+    "actual": 403,
+    "result": "PASS"
+  },
+  {
+    "id": "P8",
+    "testCase": "GET receipt as owning patient",
+    "expected": "200 application/pdf",
+    "actual": "200 application/pdf",
+    "result": "PASS"
+  },
+  {
+    "id": "S1",
+    "testCase": "Socket connect without token",
+    "expected": "rejected",
+    "actual": "rejected (Authentication error: no token)",
+    "result": "PASS"
+  },
+  {
+    "id": "S2",
+    "testCase": "Participants (patient B, doctor) join_room",
+    "expected": "room_joined for both",
+    "actual": "B=1, D=1",
+    "result": "PASS"
+  },
+  {
+    "id": "S3",
+    "testCase": "Patient A join_room on B's appointment",
+    "expected": "join_error, no room_joined",
+    "actual": "join_error=1, room_joined=0",
+    "result": "PASS"
+  },
+  {
+    "id": "S4",
+    "testCase": "Authorized send_message delivered to room",
+    "expected": "B and D receive new_message",
+    "actual": "B=1, D=1",
+    "result": "PASS"
+  },
+  {
+    "id": "S5",
+    "testCase": "Authorized typing relayed",
+    "expected": "B receives doctor's user_typing",
+    "actual": "received=true",
+    "result": "PASS"
+  },
+  {
+    "id": "S6",
+    "testCase": "Attacker receives room events",
+    "expected": "0 new_message, 0 user_typing",
+    "actual": "new_message=0, user_typing=0",
+    "result": "PASS"
+  },
+  {
+    "id": "S7",
+    "testCase": "Attacker typing injected into B's room",
+    "expected": "not delivered",
+    "actual": "not delivered",
+    "result": "PASS"
+  },
+  {
+    "id": "S8",
+    "testCase": "Attacker send_message to B's room",
+    "expected": "send_error, not delivered",
+    "actual": "send_error=1, B new_message=1",
+    "result": "PASS"
+  },
+  {
+    "id": "S9",
+    "testCase": "Chat history via REST as doctor after live chat",
+    "expected": "200, 1 message",
+    "actual": "200, 1 message(s)",
+    "result": "PASS"
+  },
+  {
+    "id": "S10",
+    "testCase": "Socket connect as deactivated user (token still valid)",
+    "expected": "rejected",
+    "actual": "rejected (Authentication error: account is deactivated)",
+    "result": "PASS"
+  }
+]
