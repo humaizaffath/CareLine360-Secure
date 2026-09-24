@@ -3,7 +3,8 @@ const path = require("path");
 // affected endpoint (mounted exactly as in server.js) and prints redacted results.
 // Usage (from repo root, after `npm install` in server/): node security-evidence/V3/capture-evidence.js <label>
 // Writes v3-<label>.json next to this file. Uses synthetic data in an in-memory MongoDB.
-const S = path.resolve(__dirname, "../../server");
+// SERVER_DIR lets the same script run against another checkout (e.g. the pre-fix commit).
+const S = process.env.SERVER_DIR ? path.resolve(process.env.SERVER_DIR) : path.resolve(__dirname, "../../server");
 const r = (p) => require(`${S}/${p}`);
 const mongoose = r("node_modules/mongoose");
 const express = r("node_modules/express");

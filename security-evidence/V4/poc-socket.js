@@ -9,7 +9,8 @@
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
-const S = path.resolve(__dirname, "../../server");
+// SERVER_DIR lets the same script run against another checkout (e.g. the pre-fix commit).
+const S = process.env.SERVER_DIR ? path.resolve(process.env.SERVER_DIR) : path.resolve(__dirname, "../../server");
 const r = (p) => require(`${S}/${p}`);
 const mongoose = r("node_modules/mongoose");
 const jwt = r("node_modules/jsonwebtoken");
