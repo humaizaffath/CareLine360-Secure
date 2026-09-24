@@ -1,0 +1,549 @@
+[
+  {
+    "route": "GET /api/users",
+    "request": {
+      "method": "GET",
+      "path": "/api/users",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "_id": "<objectId>",
+          "role": "doctor",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.279Z",
+          "updatedAt": "2026-09-24T07:06:09.279Z",
+          "__v": 0
+        },
+        {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        }
+      ]
+    }
+  },
+  {
+    "route": "GET /api/users?role=doctor",
+    "request": {
+      "method": "GET",
+      "path": "/api/users?role=doctor",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "_id": "<objectId>",
+          "role": "doctor",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.279Z",
+          "updatedAt": "2026-09-24T07:06:09.279Z",
+          "__v": 0
+        }
+      ]
+    }
+  },
+  {
+    "route": "GET /api/users/:id",
+    "request": {
+      "method": "GET",
+      "path": "/api/users/:id",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "role": "patient",
+        "fullName": "[REDACTED-PII]",
+        "email": "[REDACTED-PII]",
+        "phone": "[REDACTED-PII]",
+        "isVerified": false,
+        "isActive": true,
+        "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+        "status": "ACTIVE",
+        "createdAt": "2026-09-24T07:06:09.252Z",
+        "updatedAt": "2026-09-24T07:06:09.252Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "GET /api/emergency",
+    "request": {
+      "method": "GET",
+      "path": "/api/emergency",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [],
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "_id": "<objectId>",
+          "patient": {
+            "_id": "<objectId>",
+            "fullName": "[REDACTED-PII]",
+            "email": "[REDACTED-PII]",
+            "phone": "[REDACTED-PII]"
+          },
+          "description": "[REDACTED-PII]",
+          "status": "PENDING",
+          "latitude": "[REDACTED-LOCATION]",
+          "longitude": "[REDACTED-LOCATION]",
+          "triggeredAt": "2026-09-24T07:06:09.311Z",
+          "createdAt": "2026-09-24T07:06:09.312Z",
+          "updatedAt": "2026-09-24T07:06:09.312Z",
+          "__v": 0
+        }
+      ]
+    }
+  },
+  {
+    "route": "GET /api/emergency/:id",
+    "request": {
+      "method": "GET",
+      "path": "/api/emergency/:id",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "patient": {
+          "_id": "<objectId>",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]"
+        },
+        "description": "[REDACTED-PII]",
+        "status": "PENDING",
+        "latitude": "[REDACTED-LOCATION]",
+        "longitude": "[REDACTED-LOCATION]",
+        "triggeredAt": "2026-09-24T07:06:09.311Z",
+        "createdAt": "2026-09-24T07:06:09.312Z",
+        "updatedAt": "2026-09-24T07:06:09.312Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "GET /api/emergency/:id/nearest-hospital",
+    "request": {
+      "method": "GET",
+      "path": "/api/emergency/:id/nearest-hospital",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [],
+    "response": {
+      "success": true,
+      "nearestHospital": {
+        "name": "[REDACTED-PII]",
+        "lat": "[REDACTED-LOCATION]",
+        "lng": "[REDACTED-LOCATION]",
+        "distance": 6.37
+      }
+    }
+  },
+  {
+    "route": "POST /api/emergency",
+    "request": {
+      "method": "POST",
+      "path": "/api/emergency",
+      "authorization": "none",
+      "body": {
+        "patient": "<objectId>",
+        "description": "[REDACTED-PII]",
+        "latitude": "[REDACTED-LOCATION]",
+        "longitude": "[REDACTED-LOCATION]"
+      }
+    },
+    "status": 201,
+    "secretFieldsInResponse": [],
+    "response": {
+      "success": true,
+      "data": {
+        "patient": "<objectId>",
+        "description": "[REDACTED-PII]",
+        "status": "PENDING",
+        "latitude": "[REDACTED-LOCATION]",
+        "longitude": "[REDACTED-LOCATION]",
+        "_id": "<objectId>",
+        "triggeredAt": "2026-09-24T07:06:09.418Z",
+        "createdAt": "2026-09-24T07:06:09.418Z",
+        "updatedAt": "2026-09-24T07:06:09.418Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "PATCH /api/emergency/:id/status",
+    "request": {
+      "method": "PATCH",
+      "path": "/api/emergency/:id/status",
+      "authorization": "none",
+      "body": {
+        "status": "RESOLVED",
+        "responderName": "[REDACTED-PII]"
+      }
+    },
+    "status": 200,
+    "secretFieldsInResponse": [],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "patient": "<objectId>",
+        "description": "[REDACTED-PII]",
+        "status": "RESOLVED",
+        "latitude": "[REDACTED-LOCATION]",
+        "longitude": "[REDACTED-LOCATION]",
+        "triggeredAt": "2026-09-24T07:06:09.311Z",
+        "createdAt": "2026-09-24T07:06:09.312Z",
+        "updatedAt": "2026-09-24T07:06:09.427Z",
+        "__v": 0,
+        "resolvedAt": "2026-09-24T07:06:09.426Z",
+        "responderName": "[REDACTED-PII]",
+        "responseTime": 0
+      }
+    }
+  },
+  {
+    "route": "GET /api/payments/:id",
+    "request": {
+      "method": "GET",
+      "path": "/api/payments/:id",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "passwordHash",
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "appointment": {
+          "_id": "<objectId>",
+          "patient": "<objectId>",
+          "doctor": "<objectId>",
+          "date": "2026-10-01T00:00:00.000Z",
+          "time": "10:00",
+          "consultationType": "video",
+          "status": "confirmed",
+          "priority": "low",
+          "reminderSent": false,
+          "rescheduleHistory": [],
+          "createdAt": "2026-09-24T07:06:09.298Z",
+          "updatedAt": "2026-09-24T07:06:09.298Z",
+          "__v": 0
+        },
+        "patient": {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "passwordHash": "[REDACTED-SECRET-HASH]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        },
+        "amount": 2500,
+        "currency": "LKR",
+        "status": "pending",
+        "method": "card",
+        "createdAt": "2026-09-24T07:06:09.306Z",
+        "updatedAt": "2026-09-24T07:06:09.306Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "GET /api/payments/appointment/:appointmentId",
+    "request": {
+      "method": "GET",
+      "path": "/api/payments/appointment/:appointmentId",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "passwordHash",
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "appointment": {
+          "_id": "<objectId>",
+          "patient": "<objectId>",
+          "doctor": "<objectId>",
+          "date": "2026-10-01T00:00:00.000Z",
+          "time": "10:00",
+          "consultationType": "video",
+          "status": "confirmed",
+          "priority": "low",
+          "reminderSent": false,
+          "rescheduleHistory": [],
+          "createdAt": "2026-09-24T07:06:09.298Z",
+          "updatedAt": "2026-09-24T07:06:09.298Z",
+          "__v": 0
+        },
+        "patient": {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "passwordHash": "[REDACTED-SECRET-HASH]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        },
+        "amount": 2500,
+        "currency": "LKR",
+        "status": "pending",
+        "method": "card",
+        "createdAt": "2026-09-24T07:06:09.306Z",
+        "updatedAt": "2026-09-24T07:06:09.306Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "POST /api/payments",
+    "request": {
+      "method": "POST",
+      "path": "/api/payments",
+      "authorization": "none",
+      "body": {
+        "appointment": "<objectId>",
+        "patient": "<objectId>",
+        "amount": 1
+      }
+    },
+    "status": 201,
+    "secretFieldsInResponse": [
+      "passwordHash",
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "appointment": {
+          "_id": "<objectId>",
+          "patient": "<objectId>",
+          "doctor": "<objectId>",
+          "date": "2026-10-03T00:00:00.000Z",
+          "time": "12:00",
+          "consultationType": "video",
+          "status": "pending",
+          "priority": "low",
+          "reminderSent": false,
+          "rescheduleHistory": [],
+          "createdAt": "2026-09-24T07:06:09.317Z",
+          "updatedAt": "2026-09-24T07:06:09.317Z",
+          "__v": 0
+        },
+        "patient": {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "passwordHash": "[REDACTED-SECRET-HASH]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        },
+        "amount": 1,
+        "currency": "LKR",
+        "status": "pending",
+        "method": "card",
+        "_id": "<objectId>",
+        "createdAt": "2026-09-24T07:06:09.472Z",
+        "updatedAt": "2026-09-24T07:06:09.472Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "PATCH /api/payments/:id/fail",
+    "request": {
+      "method": "PATCH",
+      "path": "/api/payments/:id/fail",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "passwordHash",
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "appointment": {
+          "_id": "<objectId>",
+          "patient": "<objectId>",
+          "doctor": "<objectId>",
+          "date": "2026-10-01T00:00:00.000Z",
+          "time": "10:00",
+          "consultationType": "video",
+          "status": "confirmed",
+          "priority": "low",
+          "reminderSent": false,
+          "rescheduleHistory": [],
+          "createdAt": "2026-09-24T07:06:09.298Z",
+          "updatedAt": "2026-09-24T07:06:09.298Z",
+          "__v": 0
+        },
+        "patient": {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "passwordHash": "[REDACTED-SECRET-HASH]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        },
+        "amount": 2500,
+        "currency": "LKR",
+        "status": "failed",
+        "method": "card",
+        "createdAt": "2026-09-24T07:06:09.306Z",
+        "updatedAt": "2026-09-24T07:06:09.484Z",
+        "__v": 0
+      }
+    }
+  },
+  {
+    "route": "GET /api/payments/:id/receipt",
+    "request": {
+      "method": "GET",
+      "path": "/api/payments/:id/receipt",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [],
+    "response": "<PDF receipt, 2720 bytes, content-type application/pdf>"
+  },
+  {
+    "route": "PATCH /api/payments/:id/verify",
+    "request": {
+      "method": "PATCH",
+      "path": "/api/payments/:id/verify",
+      "authorization": "none"
+    },
+    "status": 200,
+    "secretFieldsInResponse": [
+      "passwordHash",
+      "refreshTokenHash"
+    ],
+    "response": {
+      "success": true,
+      "data": {
+        "_id": "<objectId>",
+        "appointment": {
+          "_id": "<objectId>",
+          "patient": "<objectId>",
+          "doctor": "<objectId>",
+          "date": "2026-10-04T00:00:00.000Z",
+          "time": "13:00",
+          "consultationType": "video",
+          "status": "pending",
+          "priority": "low",
+          "reminderSent": false,
+          "rescheduleHistory": [],
+          "createdAt": "2026-09-24T07:06:09.321Z",
+          "updatedAt": "2026-09-24T07:06:09.321Z",
+          "__v": 0
+        },
+        "patient": {
+          "_id": "<objectId>",
+          "role": "patient",
+          "fullName": "[REDACTED-PII]",
+          "email": "[REDACTED-PII]",
+          "phone": "[REDACTED-PII]",
+          "passwordHash": "[REDACTED-SECRET-HASH]",
+          "isVerified": false,
+          "isActive": true,
+          "refreshTokenHash": "[REDACTED-SECRET-HASH]",
+          "status": "ACTIVE",
+          "createdAt": "2026-09-24T07:06:09.252Z",
+          "updatedAt": "2026-09-24T07:06:09.252Z",
+          "__v": 0
+        },
+        "amount": 10,
+        "currency": "LKR",
+        "status": "verified",
+        "method": "card",
+        "createdAt": "2026-09-24T07:06:09.323Z",
+        "updatedAt": "2026-09-24T07:06:09.562Z",
+        "__v": 0,
+        "verifiedAt": "2026-09-24T07:06:09.562Z",
+        "transactionRef": "<transactionRef>"
+      }
+    }
+  }
+]

@@ -6,7 +6,7 @@ const Doctor = require("../models/Doctor");
 
 const createPayment = async (req, res, next) => {
   try {
-    const payment = await paymentService.createPayment(req.body);
+    const payment = await paymentService.createPayment(req.body, req.user);
     res.status(201).json({ success: true, data: payment });
   } catch (error) {
     next(error);
@@ -15,7 +15,7 @@ const createPayment = async (req, res, next) => {
 
 const getPaymentById = async (req, res, next) => {
   try {
-    const payment = await paymentService.getPaymentById(req.params.id);
+    const payment = await paymentService.getPaymentById(req.params.id, req.user);
     res.json({ success: true, data: payment });
   } catch (error) {
     next(error);
@@ -24,7 +24,7 @@ const getPaymentById = async (req, res, next) => {
 
 const getPaymentByAppointment = async (req, res, next) => {
   try {
-    const payment = await paymentService.getPaymentByAppointment(req.params.appointmentId);
+    const payment = await paymentService.getPaymentByAppointment(req.params.appointmentId, req.user);
     res.json({ success: true, data: payment });
   } catch (error) {
     next(error);
@@ -33,7 +33,7 @@ const getPaymentByAppointment = async (req, res, next) => {
 
 const verifyPayment = async (req, res, next) => {
   try {
-    const payment = await paymentService.verifyPayment(req.params.id);
+    const payment = await paymentService.verifyPayment(req.params.id, req.user);
     res.json({ success: true, data: payment });
   } catch (error) {
     next(error);
@@ -42,7 +42,7 @@ const verifyPayment = async (req, res, next) => {
 
 const failPayment = async (req, res, next) => {
   try {
-    const payment = await paymentService.failPayment(req.params.id);
+    const payment = await paymentService.failPayment(req.params.id, req.user);
     res.json({ success: true, data: payment });
   } catch (error) {
     next(error);
@@ -51,7 +51,7 @@ const failPayment = async (req, res, next) => {
 
 const getReceipt = async (req, res, next) => {
   try {
-    const payment = await paymentService.getPaymentById(req.params.id);
+    const payment = await paymentService.getPaymentById(req.params.id, req.user);
     if (!payment) {
       const err = new Error("Payment not found");
       err.statusCode = 404;
