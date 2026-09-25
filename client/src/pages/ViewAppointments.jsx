@@ -40,7 +40,10 @@ export default function ViewAppointments() {
   const [showFilters, setShowFilters] = useState(false);
 
   const fetchAppointments = useCallback(async () => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const params = { ...filters };

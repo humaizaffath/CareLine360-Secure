@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAuth } from "../auth/authStorage";
 
 const baseURL = import.meta.env.VITE_API_URL;
 
@@ -25,7 +26,15 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem("refreshToken");
       if (!refreshToken) return Promise.reject(err);
 
-      const refreshRes = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+      let refreshRes;
+      try {
+        refreshRes = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+      } catch (refreshErr) {
+        // Session expired — clear stale tokens and send the user to login
+        clearAuth();
+        if (window.location.pathname !== "/login") window.location.assign("/login");
+        return Promise.reject(refreshErr);
+      }
       localStorage.setItem("accessToken", refreshRes.data.accessToken);
 
       original.headers.Authorization = `Bearer ${refreshRes.data.accessToken}`;

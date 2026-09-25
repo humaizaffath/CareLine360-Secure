@@ -1,27 +1,32 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { setAuth as storageSetAuth, clearAuth as storageClearAuth } from "../auth/authStorage";
-import { api } from "../api/axios";
+import {
+  setAuth as storageSetAuth,
+  clearAuth as storageClearAuth,
+  AUTH_CHANGE_EVENT,
+} from "../auth/authStorage";
 
 const AuthContext = createContext(null);
 
+// Read the persisted user synchronously so the very first render already
+// knows whether someone is logged in (otherwise ProtectedRoute redirects to
+// /login on every page refresh / direct URL visit).
+const readUserFromStorage = () => {
+  const accessToken = localStorage.getItem("accessToken");
+  if (!accessToken) return null;
+
+  return {
+    id: localStorage.getItem("userId"),
+    role: localStorage.getItem("role"),
+    fullName: localStorage.getItem("fullName"),
+  };
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(readUserFromStorage);
+  const [loading, setLoading] = useState(false);
 
   const restoreFromStorage = useCallback(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    // Rehydrate basic user info from storage
-    const role = localStorage.getItem("role");
-    const fullName = localStorage.getItem("fullName");
-    const userId = localStorage.getItem("userId");
-
-    setUser({ id: userId, role, fullName });
+    setUser(readUserFromStorage());
     setLoading(false);
   }, []);
 
@@ -38,8 +43,13 @@ export function AuthProvider({ children }) {
       }
     };
 
+    // Same-tab changes made via setAuth/clearAuth (e.g. logout buttons)
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener(AUTH_CHANGE_EVENT, restoreFromStorage);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(AUTH_CHANGE_EVENT, restoreFromStorage);
+    };
   }, [restoreFromStorage]);
 
   const login = ({ accessToken, refreshToken, user }) => {
