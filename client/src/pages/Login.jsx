@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { api } from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+{
+    "errors": [
+        {
+            "type": "field",
+            "msg": "Email or phone is required",
+            "path": "identifier",
+            "location": "body"
+        }
+    ]
+}import { useAuth } from "../context/AuthContext";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
