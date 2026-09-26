@@ -4,13 +4,14 @@
  *  OWASP A07:2021)
  *
  * POST /api/auth/reactivate checks a password with bcrypt, like /login, so it
- * can be used to guess passwords. The security test sends repeated
- * wrong-password requests and expects the server to start answering 429.
- * /login, which already has a limiter, is the control.
+ * can be used to guess passwords. The security tests send repeated
+ * wrong-password requests and expect the dedicated reactivation limiter
+ * (5 requests per 15 minutes per IP) to answer 429. /login, which has its own
+ * limiter, is the control.
  *
  * Every scenario uses its own client IP (X-Forwarded-For with trust proxy 1),
- * so the per-IP counter of the shared in-memory authLimiter cannot leak from
- * one scenario into another.
+ * so the per-IP in-memory rate-limit counters cannot leak from one scenario
+ * into another.
  *
  * MongoDB is in-memory with synthetic users; no external service is used.
  */
@@ -28,15 +29,19 @@ const patientRoutes = require("../../../routes/patientRoutes");
 const TARGET_EMAIL = "target.patient@v7.test";
 const CONTROL_EMAIL = "control.patient@v7.test";
 const LEGIT_EMAIL = "legit.patient@v7.test";
+const UNKNOWN_EMAIL = "nobody@v7.test";
 const PASSWORD = "Correct#Pass1";
 const WRONG_PASSWORD = "Wrong#Pass1";
 
-// More than the existing /login limit (30 per 10 minutes)
-const ATTEMPTS = 50;
+const REACTIVATE_LIMIT = 5;
+const ATTEMPTS = 10;
 const LOGIN_LIMIT = 30;
+const LIMITED_BODY = { message: "Too many reactivation attempts, try again later" };
 
 const IP = {
   reactivateAttack: "203.0.113.10",
+  blockedCorrectPassword: "203.0.113.11",
+  v6Responses: "203.0.113.12",
   loginControl: "203.0.113.20",
   legitimate: "203.0.113.30",
 };
@@ -82,14 +87,14 @@ afterAll(async () => {
 
 const post = (ip, url, body) => request(app).post(url).set("X-Forwarded-For", ip).send(body);
 
-// Sends the same request n times and returns the status codes in order
-const statusSequence = async (n, ip, url, body) => {
-  const statuses = [];
-  for (let i = 0; i < n; i++) statuses.push((await post(ip, url, body)).status);
-  return statuses;
+// Sends the same request n times and returns the responses in order
+const repeat = async (n, ip, url, body) => {
+  const responses = [];
+  for (let i = 0; i < n; i++) responses.push(await post(ip, url, body));
+  return responses;
 };
 
-// "401 x50" style summary of a status sequence
+// "401 x5, 429 x5" style summary of a status sequence
 const summarize = (statuses) =>
   statuses
     .reduce((runs, s) => {
@@ -105,36 +110,68 @@ const summarize = (statuses) =>
 
 describe("V7: /reactivate brute-force protection", () => {
   it(`repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within ${ATTEMPTS} attempts)`, async () => {
-    const statuses = await statusSequence(ATTEMPTS, IP.reactivateAttack, "/api/auth/reactivate", {
+    const responses = await repeat(ATTEMPTS, IP.reactivateAttack, "/api/auth/reactivate", {
       identifier: TARGET_EMAIL,
       password: WRONG_PASSWORD,
     });
+    const statuses = responses.map((r) => r.status);
     console.log(`/reactivate status sequence (${ATTEMPTS} wrong-password requests): ${summarize(statuses)}`);
-
-    // Every request before the limit is a normal wrong-password answer
-    const first429 = statuses.indexOf(429);
-    const beforeLimit = first429 === -1 ? statuses : statuses.slice(0, first429);
-    expect(new Set(beforeLimit)).toEqual(new Set([401]));
+    console.log(`/reactivate statuses in order: ${statuses.join(" ")}`);
 
     expect(statuses).toContain(429);
+
+    // First REACTIVATE_LIMIT answers are normal wrong-password 401s, every later one is 429
+    expect(statuses).toEqual([
+      ...Array(REACTIVATE_LIMIT).fill(401),
+      ...Array(ATTEMPTS - REACTIVATE_LIMIT).fill(429),
+    ]);
+
+    // Generic JSON message and standard (not legacy) rate-limit headers
+    const limited = responses[REACTIVATE_LIMIT];
+    expect(limited.body).toEqual(LIMITED_BODY);
+    expect(limited.headers["ratelimit-policy"]).toBeDefined();
+    expect(limited.headers["ratelimit"]).toBeDefined();
+    expect(limited.headers["x-ratelimit-limit"]).toBeUndefined();
 
     // The account was never reactivated by guessing
     expect((await User.findOne({ email: TARGET_EMAIL })).isActive).toBe(false);
   }, 60000);
+
+  it("once limited, even the correct password is blocked and the account stays deactivated", async () => {
+    const ip = IP.blockedCorrectPassword;
+    await repeat(REACTIVATE_LIMIT, ip, "/api/auth/reactivate", { identifier: TARGET_EMAIL, password: WRONG_PASSWORD });
+
+    const res = await post(ip, "/api/auth/reactivate", { identifier: TARGET_EMAIL, password: PASSWORD });
+
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual(LIMITED_BODY);
+    expect((await User.findOne({ email: TARGET_EMAIL })).isActive).toBe(false);
+  });
+
+  it("V6 still holds before the limit: known + wrong password and unknown account both get 401 'Invalid credentials'", async () => {
+    const ip = IP.v6Responses;
+    const known = await post(ip, "/api/auth/reactivate", { identifier: TARGET_EMAIL, password: WRONG_PASSWORD });
+    const unknown = await post(ip, "/api/auth/reactivate", { identifier: UNKNOWN_EMAIL, password: WRONG_PASSWORD });
+
+    expect({ status: known.status, body: known.body }).toEqual({ status: 401, body: { message: "Invalid credentials" } });
+    expect({ status: unknown.status, body: unknown.body }).toEqual({ status: 401, body: { message: "Invalid credentials" } });
+  });
 });
 
 // ─── Control: the existing /login limiter ────────────────────────────────────
 
 describe("V7 control: /login is already rate-limited", () => {
   it(`POST /api/auth/login returns 429 after ${LOGIN_LIMIT} wrong-password attempts`, async () => {
-    const statuses = await statusSequence(LOGIN_LIMIT + 1, IP.loginControl, "/api/auth/login", {
+    const responses = await repeat(LOGIN_LIMIT + 1, IP.loginControl, "/api/auth/login", {
       identifier: CONTROL_EMAIL,
       password: WRONG_PASSWORD,
     });
+    const statuses = responses.map((r) => r.status);
     console.log(`/login status sequence (${LOGIN_LIMIT + 1} wrong-password requests): ${summarize(statuses)}`);
 
     expect(statuses.slice(0, LOGIN_LIMIT)).toEqual(Array(LOGIN_LIMIT).fill(401));
     expect(statuses[LOGIN_LIMIT]).toBe(429);
+    expect(responses[LOGIN_LIMIT].body).toEqual({ message: "Too many attempts, try again later" });
   }, 60000);
 });
 

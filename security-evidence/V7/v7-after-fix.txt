@@ -1,0 +1,78 @@
+# V7 AFTER evidence — captured 2026-09-26 17:57:01 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+7b8fe6a
+# Working tree = HEAD + uncommitted V7 fix:
+$ git diff -- server/routes/authRoutes.js
+diff --git a/server/routes/authRoutes.js b/server/routes/authRoutes.js
+index 968fe51..a6cedf6 100644
+--- a/server/routes/authRoutes.js
++++ b/server/routes/authRoutes.js
+@@ -23,6 +23,15 @@ const authLimiter = rateLimit({
+   message: { message: "Too many attempts, try again later" },
+ });
+ 
++// /reactivate checks a password, so it gets its own stricter brute-force limit (CWE-307)
++const reactivateLimiter = rateLimit({
++  windowMs: 15 * 60 * 1000,
++  max: 5,
++  standardHeaders: "draft-8",
++  legacyHeaders: false,
++  message: { message: "Too many reactivation attempts, try again later" },
++});
++
+ router.post(
+   "/register",
+   authLimiter,
+@@ -115,6 +124,7 @@ router.post(
+ 
+ router.post(
+   "/reactivate",
++  reactivateLimiter,
+   reactivateAccount
+ );
+ 
+$ cd server && npx jest tests/integration/security/v7-reactivate-ratelimit.test.js --verbose
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.log
+    /reactivate status sequence (10 wrong-password requests): 401 x5, 429 x5
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:118:13)
+
+  console.log
+    /reactivate statuses in order: 401 401 401 401 401 429 429 429 429 429
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:119:13)
+
+  console.log
+    /login status sequence (31 wrong-password requests): 401 x30, 429 x1
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:170:13)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+PASS tests/integration/security/v7-reactivate-ratelimit.test.js (32.955 s)
+  V7: /reactivate brute-force protection
+    √ repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within 10 attempts) (682 ms)
+    √ once limited, even the correct password is blocked and the account stays deactivated (446 ms)
+    √ V6 still holds before the limit: known + wrong password and unknown account both get 401 'Invalid credentials' (166 ms)
+  V7 control: /login is already rate-limited
+    √ POST /api/auth/login returns 429 after 30 wrong-password attempts (2684 ms)
+  V7 positive: legitimate reactivation still works
+    √ a self-deactivated patient reactivates with the correct password and can log in again (502 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        33.059 s
+Ran all test suites matching tests/integration/security/v7-reactivate-ratelimit.test.js.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+[jest exit code: 0]

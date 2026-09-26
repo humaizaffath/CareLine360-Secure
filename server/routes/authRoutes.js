@@ -23,6 +23,15 @@ const authLimiter = rateLimit({
   message: { message: "Too many attempts, try again later" },
 });
 
+// /reactivate checks a password, so it gets its own stricter brute-force limit (CWE-307)
+const reactivateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { message: "Too many reactivation attempts, try again later" },
+});
+
 router.post(
   "/register",
   authLimiter,
@@ -115,6 +124,7 @@ router.post(
 
 router.post(
   "/reactivate",
+  reactivateLimiter,
   reactivateAccount
 );
 
