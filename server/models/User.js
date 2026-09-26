@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema(
 
     passwordHash: { type: String, required: true },
 
+    // Google OIDC subject ("sub"), set when the account is linked to Google sign-in
+    googleSub: { type: String, unique: true, sparse: true },
+
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
 

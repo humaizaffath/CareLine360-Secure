@@ -11,6 +11,7 @@ const {
   confirmVerifyEmailOtp,
   forgotPassword,
   resetPassword,
+  googleLogin,
 } = require("../controllers/authController");
 
 const { reactivateAccount } = require("../controllers/patientController");
@@ -59,6 +60,21 @@ router.post(
 );
 
 router.post("/refresh", authLimiter, [body("refreshToken").notEmpty()], refresh);
+
+// Google OIDC (Authorization Code + PKCE). Role, email and name never come from this body.
+router.post(
+  "/oauth/google",
+  authLimiter,
+  [
+    body("code").isString().withMessage("code required").bail().notEmpty().withMessage("code required").isLength({ max: 2048 }),
+    body("codeVerifier")
+      .isString().withMessage("codeVerifier required").bail()
+      .matches(/^[A-Za-z0-9\-._~]{43,128}$/).withMessage("Invalid PKCE code verifier"),
+    body("redirectUri").isString().withMessage("redirectUri required").bail().notEmpty().withMessage("redirectUri required").isLength({ max: 2048 }),
+    body("nonce").isString().withMessage("nonce required").bail().isLength({ min: 16, max: 256 }).withMessage("Invalid nonce"),
+  ],
+  googleLogin
+);
 router.post("/logout", authMiddleware, logout);
 
 router.get("/me", authMiddleware, async (req, res) => {
