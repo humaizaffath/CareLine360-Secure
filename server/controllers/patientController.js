@@ -4,7 +4,7 @@ const MedicalRecord = require("../models/MedicalRecord");
 const Prescription = require("../models/Prescription");
 const Doctor = require("../models/Doctor");
 const Hospital = require("../models/Hospital");
-const bcrypt = require("bcryptjs");
+const { verifyPassword } = require("../utils/password");
 const EmergencyCase = require("../models/EmergencyCase");
 
 const { calcPatientProfileStrength } = require("../services/profileStrength");
@@ -229,9 +229,8 @@ const reactivateAccount = async (req, res) => {
       $or: [{ email: identifier.toLowerCase() }, { phone: identifier }],
     });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    // Same 401 for unknown account and wrong password (CWE-203/204)
+    const ok = await verifyPassword(user, password);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
     user.isActive = true;

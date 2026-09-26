@@ -6,6 +6,18 @@ const Otp = require("../models/Otp");
 const { sendEmail } = require("./emailService");
 const { generateOtp, hashOtp } = require("../utils/otp");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/tokens");
+const { verifyPassword } = require("../utils/password");
+
+// Same answer whether or not the account exists (CWE-203/204)
+const VERIFY_OTP_SENT = { status: 200, data: { message: "If the account exists and is not yet verified, a verification code has been sent." } };
+const RESET_OTP_SENT = { status: 200, data: { message: "If the account exists, a password reset code has been sent." } };
+const OTP_NOT_FOUND = { status: 400, data: { message: "OTP not found or expired" } };
+
+// Not awaited, so response time does not depend on whether an email was sent
+const sendEmailInBackground = (mail) =>
+  Promise.resolve()
+    .then(() => sendEmail(mail))
+    .catch((e) => console.error("Email send error:", e?.message));
 
 const getNextPatientId = async () => {
   const counter = await Counter.findOneAndUpdate(
@@ -85,11 +97,11 @@ const loginUser = async ({ identifier, password }) => {
     : { phone: rawIdentifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 401, data: { message: "Invalid credentials" } };
-  if (!user.isActive) return { status: 403, data: { message: "Account is deactivated" } };
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  // Password first: account state is only revealed to someone who knows it
+  const ok = await verifyPassword(user, password);
   if (!ok) return { status: 401, data: { message: "Invalid credentials" } };
+  if (!user.isActive) return { status: 403, data: { message: "Account is deactivated" } };
 
   // Option A: block login unless ACTIVE
   if (user.status !== "ACTIVE") {
@@ -147,10 +159,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
-
-  if (!user.email) return { status: 400, data: { message: "Email not available for this account" } };
-  if (user.isVerified) return { status: 200, data: { message: "Email already verified" } };
+  if (!user || !user.email || user.isVerified) return VERIFY_OTP_SENT;
 
   // remove old OTPs for this purpose
   await Otp.deleteMany({ userId: user._id, purpose: "EMAIL_VERIFY" });
@@ -164,7 +173,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     attemptsLeft: 5,
   });
 
-  await sendEmail({
+  sendEmailInBackground({
     to: user.email,
     subject: `${process.env.APP_NAME || "CareLine360"} - Verify your email`,
     html: `
@@ -174,7 +183,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     `,
   });
 
-  return { status: 200, data: { message: "Verification OTP sent to email" } };
+  return VERIFY_OTP_SENT;
 };
 
 const verifyEmailOtp = async ({ identifier, otp }) => {
@@ -183,10 +192,10 @@ const verifyEmailOtp = async ({ identifier, otp }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
+  if (!user) return OTP_NOT_FOUND;
 
   const record = await Otp.findOne({ userId: user._id, purpose: "EMAIL_VERIFY" });
-  if (!record) return { status: 400, data: { message: "OTP not found or expired" } };
+  if (!record) return OTP_NOT_FOUND;
 
   if (record.expiresAt < new Date()) {
     await Otp.deleteOne({ _id: record._id });
@@ -218,9 +227,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
-
-  if (!user.email) return { status: 400, data: { message: "Email not available for this account" } };
+  if (!user || !user.email) return RESET_OTP_SENT;
 
   await Otp.deleteMany({ userId: user._id, purpose: "PASSWORD_RESET" });
 
@@ -233,7 +240,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     attemptsLeft: 5,
   });
 
-  await sendEmail({
+  sendEmailInBackground({
     to: user.email,
     subject: `${process.env.APP_NAME || "CareLine360"} - Password reset`,
     html: `
@@ -243,7 +250,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     `,
   });
 
-  return { status: 200, data: { message: "Password reset OTP sent to email" } };
+  return RESET_OTP_SENT;
 };
 
 const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
@@ -252,10 +259,10 @@ const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
+  if (!user) return OTP_NOT_FOUND;
 
   const record = await Otp.findOne({ userId: user._id, purpose: "PASSWORD_RESET" });
-  if (!record) return { status: 400, data: { message: "OTP not found or expired" } };
+  if (!record) return OTP_NOT_FOUND;
 
   if (record.expiresAt < new Date()) {
     await Otp.deleteOne({ _id: record._id });
