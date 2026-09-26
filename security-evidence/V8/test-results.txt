@@ -1,0 +1,33 @@
+PASS tests/unit/upload/fileSignature.test.js
+  V8 fileSignature.detectMime
+    ✓ detects genuine file type 0 (1 ms)
+    ✓ detects genuine file type 1 (1 ms)
+    ✓ detects genuine file type 2
+    ✓ detects genuine file type 3
+    ✓ detects genuine file type 4
+    ✓ detects genuine file type 5
+    ✓ returns null for unknown / empty content
+  V8 fileSignature.validateFile
+    ✓ accepts genuine files with matching MIME and extension
+    ✓ rejects plain text disguised as a PDF (spoofed Content-Type) (4 ms)
+    ✓ rejects HTML disguised as a PNG
+    ✓ rejects a real file whose declared MIME differs from its content
+    ✓ rejects a mismatched file extension
+    ✓ rejects a real file type that is not allow-listed
+    ✓ rejects a generic ZIP disguised as DOCX
+    ✓ rejected errors carry HTTP 400 (1 ms)
+  V8 uploadBase64Image content validation
+    ✓ rejects HTML labelled as image/png and never calls Cloudinary
+    ✓ rejects a JPEG labelled as PNG (1 ms)
+    ✓ uploads a genuine PNG (1 ms)
+PASS tests/integration/upload/upload.security.test.js
+  V8 POST /api/documents
+    ✓ rejects a text file spoofed as application/pdf and does not upload it (280 ms)
+    ✓ rejects a PNG spoofed as a PDF (3 ms)
+    ✓ accepts a genuine PDF (9 ms)
+  V8 PATCH /api/patients/me/avatar
+    ✓ rejects HTML spoofed as image/png (3 ms)
+    ✓ accepts a genuine PNG avatar (4 ms)
+Test Suites: 2 passed, 2 total
+Tests:       23 passed, 23 total
+Time:        1.028 s, estimated 2 s
