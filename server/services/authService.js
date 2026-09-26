@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Patient = require("../models/Patient");
@@ -18,6 +19,10 @@ const sendEmailInBackground = (mail) =>
   Promise.resolve()
     .then(() => sendEmail(mail))
     .catch((e) => console.error("Email send error:", e?.message));
+
+// bcrypt reads only the first 72 bytes, which every refresh token of a user
+// shares (JWT header + userId). Hashing a SHA-256 digest makes the whole token count.
+const refreshTokenDigest = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
 
 const getNextPatientId = async () => {
   const counter = await Counter.findOneAndUpdate(
@@ -71,9 +76,9 @@ const registerUser = async ({ identifier, password, fullName, role }) => {
   await Patient.create({ userId: user._id, patientId, fullName });
 
   const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
-  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role });
+  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role, jti: crypto.randomUUID() });
 
-  user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  user.refreshTokenHash = await bcrypt.hash(refreshTokenDigest(refreshToken), 10);
   await user.save();
 
   return {
@@ -101,6 +106,15 @@ const loginUser = async ({ identifier, password }) => {
   // Password first: account state is only revealed to someone who knows it
   const ok = await verifyPassword(user, password);
   if (!ok) return { status: 401, data: { message: "Invalid credentials" } };
+
+  const blocked = accountStateError(user);
+  if (blocked) return blocked;
+
+  return issueSession(user);
+};
+
+// 403 result when the account may not sign in, otherwise null
+const accountStateError = (user) => {
   if (!user.isActive) return { status: 403, data: { message: "Account is deactivated" } };
 
   // Option A: block login unless ACTIVE
@@ -112,12 +126,18 @@ const loginUser = async ({ identifier, password }) => {
     return { status: 403, data: { message: msg, status: user.status } };
   }
 
+  return null;
+};
+
+// Signs a new access/refresh pair and stores the refresh token hash (one session per user)
+const issueSession = async (user) => {
   user.lastLoginAt = new Date();
 
   const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
-  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role });
+  // jti makes every refresh token unique, even two issued in the same second
+  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role, jti: crypto.randomUUID() });
 
-  user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  user.refreshTokenHash = await bcrypt.hash(refreshTokenDigest(refreshToken), 10);
   await user.save();
 
   return {
@@ -138,7 +158,7 @@ const refreshAccessToken = async ({ refreshToken }) => {
     const user = await User.findById(decoded.userId);
     if (!user || !user.isActive) return { status: 401, data: { message: "Invalid refresh token" } };
 
-    const match = await bcrypt.compare(refreshToken, user.refreshTokenHash || "");
+    const match = await bcrypt.compare(refreshTokenDigest(refreshToken), user.refreshTokenHash || "");
     if (!match) return { status: 401, data: { message: "Invalid refresh token" } };
 
     const newAccessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
@@ -294,6 +314,9 @@ const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
 
 
 module.exports = {
+  getNextPatientId,
+  accountStateError,
+  issueSession,
   registerUser,
   loginUser,
   refreshAccessToken,
