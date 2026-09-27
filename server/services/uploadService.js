@@ -1,5 +1,25 @@
 const cloudinary = require("../config/cloudinary");
 const streamifier = require("streamifier");
+const { detectMime, normalizeMime } = require("../utils/fileSignature");
+
+/**
+ * Upload a raw buffer to Cloudinary. Callers must validate the buffer's
+ * content (see utils/fileSignature) before calling this.
+ *
+ * @param {Buffer} buffer
+ * @param {object} options - Cloudinary upload options (folder, resource_type, transformation, ...)
+ * @returns {Promise<object>} Cloudinary upload result
+ */
+const uploadBuffer = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(new Error(error.message || "Cloudinary upload failed"));
+      resolve(result);
+    });
+
+    streamifier.createReadStream(buffer).pipe(uploadStream);
+  });
+};
 
 /**
  * Upload a base64 data-URI image to Cloudinary.
@@ -33,6 +53,12 @@ const uploadBase64Image = (base64String, options = {}) => {
     }
 
     const buffer = Buffer.from(matches[2], "base64");
+
+    // Verify the decoded bytes really are the declared image type (magic bytes)
+    const detected = detectMime(buffer);
+    if (!detected || !allowedTypes.includes(detected) || detected !== normalizeMime(mimeType)) {
+      return reject(new Error("Image content does not match an allowed image type"));
+    }
 
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -68,4 +94,4 @@ const deleteCloudinaryFile = async (publicId, resourceType = "image") => {
   }
 };
 
-module.exports = { uploadBase64Image, deleteCloudinaryFile };
+module.exports = { uploadBase64Image, uploadBuffer, deleteCloudinaryFile };

@@ -1,0 +1,40 @@
+V10 – full server test suite (npx jest), run on 2026-09-26 with Node v26.9.0
+
+BEFORE dependency changes:
+Test Suites: 9 failed, 17 passed, 26 total
+Tests:       51 failed, 282 passed, 333 total
+
+AFTER dependency changes:
+Test Suites: 9 failed, 17 passed, 26 total
+Tests:       51 failed, 282 passed, 333 total
+
+Per-suite result is identical before and after (diff of PASS/FAIL list is empty).
+The 9 failing suites were already failing before any V10 change (pre-existing, not caused by V10):
+  FAIL tests/integration/admin/admin.test.js
+  FAIL tests/integration/appointment/appointment.test.js
+  FAIL tests/integration/patient/patient.test.js
+  FAIL tests/unit/admin/admin.test.js
+  FAIL tests/unit/appointment/appointment.test.js
+  FAIL tests/unit/appointment/appointmentService.test.js
+  FAIL tests/unit/appointment/appointmentValidator.test.js
+  FAIL tests/unit/doctor/doctorController.test.js
+  FAIL tests/unit/patient/patient.test.js
+
+Passing suites (before and after):
+  PASS tests/integration/appointment/rating.test.js
+  PASS tests/integration/doctor/chat.test.js
+  PASS tests/integration/doctor/doctor.api.test.js
+  PASS tests/integration/payment/payment.test.js
+  PASS tests/integration/payment/receipt.test.js
+  PASS tests/integration/upload/upload.security.test.js
+  PASS tests/unit/appointment/appointmentController.test.js
+  PASS tests/unit/appointment/authMiddleware.test.js
+  PASS tests/unit/appointment/errorHandler.test.js
+  PASS tests/unit/appointment/ratingService.test.js
+  PASS tests/unit/appointment/validateRequest.test.js
+  PASS tests/unit/doctor/doctorService.test.js
+  PASS tests/unit/payment/paymentController.test.js
+  PASS tests/unit/payment/paymentService.test.js
+  PASS tests/unit/payment/paymentValidator.test.js
+  PASS tests/unit/payment/receiptPdfService.test.js
+  PASS tests/unit/upload/fileSignature.test.js
