@@ -1,0 +1,254 @@
+# OAuth backend tests — captured 2026-09-27 07:51:05 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+aad24c0
+# Code under test: committed HEAD aad24c0 (backend 2e6de87, 2d06bcb, 44c667a; frontend aad24c0). Only security-evidence/OAUTH/ is uncommitted.
+$ git status --short
+?? security-evidence/OAUTH/
+# google-auth-library "version":"11.1.0"
+$ cd server && npx jest tests/integration/security --verbose
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+PASS tests/integration/security/v4-socket-authz.test.js (26.43 s)
+  V4: socket authentication
+    √ rejects a socket without a token (201 ms)
+    √ rejects a socket with an invalid token (106 ms)
+    √ rejects a deactivated user even with a still-valid token (103 ms)
+    √ accepts an active user with a valid token (75 ms)
+  V4: a user cannot join another user's room
+    √ denies join_room with join_error and never adds the socket to the room (119 ms)
+    √ does not deliver the room's messages or typing events to the attacker (210 ms)
+    √ drops typing/stop_typing the attacker sends into the room (195 ms)
+    √ still rejects send_message from the attacker (existing rule preserved) (104 ms)
+    √ denies a doctor who is not on the appointment (104 ms)
+    √ rejects join_room with a non-ObjectId string (89 ms)
+    √ rejects join_room with an operator object (89 ms)
+    √ rejects join_room with a missing appointmentId (89 ms)
+    √ rejects join_room with no payload (94 ms)
+  V4: appointment participants can join and chat normally
+    √ patient and doctor join, exchange messages and typing indicators (106 ms)
+    √ each user only reaches their own room (191 ms)
+    √ does not relay typing from a participant who has not joined the room yet (224 ms)
+    √ stops receiving room events after leave_room (316 ms)
+
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.error
+    Email send error: undefined
+
+      19 |   Promise.resolve()
+      20 |     .then(() => sendEmail(mail))
+    > 21 |     .catch((e) => console.error("Email send error:", e?.message));
+         |                           ^
+      22 |
+      23 | // bcrypt reads only the first 72 bytes, which every refresh token of a user
+      24 | // shares (JWT header + userId). Hashing a SHA-256 digest makes the whole token count.
+
+      at error (services/authService.js:21:27)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+(node:33704) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS tests/integration/security/v6-enumeration-otp.test.js (31.182 s)
+  V6: account enumeration
+    √ POST /password/forgot answers the same for known and unknown accounts (470 ms)
+    √ POST /reactivate answers the same 401 for a known account with a wrong password and an unknown account (277 ms)
+    √ POST /password/reset for an unknown account does not reveal 'User not found' (42 ms)
+    √ POST /email/verify-otp for an unknown account does not reveal 'User not found' (32 ms)
+    √ POST /email/send-verify-otp answers the same for unknown, unverified and already-verified accounts (41 ms)
+    √ POST /login with a wrong password returns the same 401 for a deactivated account and an unknown account (179 ms)
+    √ POST /login reveals deactivation (403) only after the correct password (105 ms)
+  V6: forgot-password side effects
+    √ creates a hashed 10-minute OTP with attemptsLeft = 5 and emails it for an existing account (27 ms)
+    √ creates no OTP and sends no email for an unknown account (17 ms)
+    √ a failing email send is handled and does not cause an unhandled rejection (118 ms)
+  V6: password check
+    √ rejects a non-string password even when it wraps the correct one (117 ms)
+  V6: OTP generation
+    √ generateOtp() does not use Math.random() (3 ms)
+    √ generateOtp() draws from crypto.randomInt over the full 000000-999999 range (3 ms)
+    √ positive: leading zeros are kept (2 ms)
+    √ positive: 1000 generated OTPs all match /^\d{6}$/ (68 ms)
+  V6: positive flows
+    √ forgot password → emailed OTP → reset → login with the new password (396 ms)
+    √ send verify OTP → emailed OTP → verify marks the account verified (30 ms)
+    √ wrong OTPs still exhaust attemptsLeft and then return 429 (95 ms)
+    √ reactivate with the correct password restores a deactivated account, then login succeeds (408 ms)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+PASS tests/integration/security/v3-auth-exposure.test.js (32.358 s)
+  V3: requests without an access token are rejected
+    √ returns 401 and no data for every affected endpoint (249 ms)
+    √ does not change state when unauthenticated (64 ms)
+  V3: /api/users
+    √ admin can list all users without secret fields (107 ms)
+    √ patient can list doctors (booking flow) with public fields only (33 ms)
+    √ denies patient listing all users (403) (25 ms)
+    √ denies patient listing patients (403) (23 ms)
+    √ denies doctor listing all users (403) (22 ms)
+    √ denies responder listing admins (403) (20 ms)
+    √ rejects a non-string / unknown role filter (400) (29 ms)
+    √ user can read their own record without secret fields (24 ms)
+    √ user cannot read another user's record (403) (28 ms)
+    √ admin can read any user without secret fields (24 ms)
+  V3: /api/emergency
+    √ patient can raise an SOS; it is always recorded against the caller (31 ms)
+    √ denies SOS creation for doctor (403) (18 ms)
+    √ denies SOS creation for responder (403) (19 ms)
+    √ denies SOS creation for admin (403) (21 ms)
+    √ admin can monitor emergencies without secret fields (77 ms)
+    √ responder can monitor emergencies without secret fields (55 ms)
+    √ responder can update emergency status (34 ms)
+    √ denies patient access to monitoring/dispatch routes (403) (56 ms)
+    √ denies doctor access to monitoring/dispatch routes (403) (48 ms)
+  V3: /api/payments
+    √ owning patient can read their payment; patient data has no secrets (55 ms)
+    √ appointment's doctor can read the payment without secret fields (32 ms)
+    √ admin can read the payment without secret fields (26 ms)
+    √ denies another patient (403) (82 ms)
+    √ denies an unrelated doctor (403) (87 ms)
+    √ denies a responder (role not allowed) (403) (59 ms)
+    √ patient can create a payment for their own appointment; payer is the caller (36 ms)
+    √ patient cannot create a payment for another patient's appointment (403) (30 ms)
+    √ doctor cannot create payments (403) (22 ms)
+    √ appointment's doctor can verify; response has no secret fields (29 ms)
+    √ owning patient can download the receipt of a verified payment (136 ms)
+
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:55416) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+PASS tests/integration/security/oauth-google.test.js (40.737 s)
+  O-1 new Google user
+    √ creates one ACTIVE, verified patient with a Patient profile and returns a CareLine session (356 ms)
+    √ exchanges the code server-side with the PKCE verifier and the allowlisted redirect URI (203 ms)
+    √ signing in again with the same Google account reuses the user and profile (424 ms)
+    √ falls back to the email name when Google sends no name (233 ms)
+  O-2 existing verified local patient
+    √ links the Google account to the same user and keeps the local password working (456 ms)
+  O-3 OAuth-issued refresh token
+    √ works with /auth/refresh and stops working after logout (381 ms)
+  O-5 code exchange failure (wrong PKCE verifier, replayed or expired code)
+    √ Google answering invalid_grant gives a generic 401 and creates nothing (28 ms)
+    √ Google answering invalid_request gives a generic 401 and creates nothing (24 ms)
+    √ Google answering unauthorized_client gives a generic 401 and creates nothing (16 ms)
+    √ a token response without an ID token gives a generic 401 (15 ms)
+  O-6 invalid ID token
+    √ wrong audience → 401, nothing created (17 ms)
+    √ wrong issuer → 401, nothing created (18 ms)
+    √ expired → 401, nothing created (16 ms)
+    √ email_verified false → 401, nothing created (15 ms)
+    √ email_verified missing → 401, nothing created (16 ms)
+    √ email_verified as the string 'true' → 401, nothing created (17 ms)
+    √ nonce mismatch → 401, nothing created (18 ms)
+    √ nonce missing → 401, nothing created (14 ms)
+    √ no email → 401, nothing created (16 ms)
+    √ signature from a key that is not Google's → 401, nothing created (16 ms)
+    √ the nonce is checked against the one sent by this browser (14 ms)
+  O-7 Google sign-in does not bypass account state
+    √ existing deactivated (isActive=false) patient → 403, not linked, not modified (114 ms)
+    √ existing PENDING patient → 403, not linked, not modified (108 ms)
+    √ existing REJECTED patient → 403, not linked, not modified (118 ms)
+    √ existing SUSPENDED patient → 403, not linked, not modified (121 ms)
+    √ an already-linked patient who is later suspended → 403 (98 ms)
+  O-8 safe linking and role security
+    √ email already linked to a different Google account → 409, nothing changed (95 ms)
+    √ unverified local patient: linked, marked verified, old password and old session invalidated (702 ms)
+    √ session integrity: a new login ends the previous refresh session (bcrypt 72-byte prefix) (818 ms)
+    √ role, email and name in the request body are ignored (195 ms)
+    √ existing doctor with the same email → 403, not linked, not modified (101 ms)
+    √ existing admin with the same email → 403, not linked, not modified (232 ms)
+    √ existing responder with the same email → 403, not linked, not modified (116 ms)
+    √ a non-patient account that somehow has a googleSub still cannot sign in with Google (89 ms)
+  O-10 request validation
+    √ missing code → 400 and Google is not called (12 ms)
+    √ empty code → 400 and Google is not called (10 ms)
+    √ code not a string → 400 and Google is not called (10 ms)
+    √ codeVerifier too short → 400 and Google is not called (10 ms)
+    √ codeVerifier with invalid characters → 400 and Google is not called (8 ms)
+    √ codeVerifier too long → 400 and Google is not called (8 ms)
+    √ missing redirectUri → 400 and Google is not called (11 ms)
+    √ missing nonce → 400 and Google is not called (9 ms)
+    √ nonce too short → 400 and Google is not called (14 ms)
+    √ redirectUri that is an unlisted origin → 400 and Google is not called (12 ms)
+    √ redirectUri that is a prefix of an allowed URI → 400 and Google is not called (9 ms)
+    √ redirectUri that is an allowed URI with extra path → 400 and Google is not called (12 ms)
+    √ redirectUri that is an allowed URI with a query → 400 and Google is not called (13 ms)
+    √ the second configured redirect URI is accepted (183 ms)
+  O-9 backend: no Google secret, code or token leaks
+    √ responses and stored users never contain Google tokens or the client secret (172 ms)
+    √ nothing logged during this whole file contains the secret, the code or a Google token (4 ms)
+
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.log
+    /reactivate status sequence (10 wrong-password requests): 401 x5, 429 x5
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:118:13)
+
+  console.log
+    /reactivate statuses in order: 401 401 401 401 401 429 429 429 429 429
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:119:13)
+
+  console.log
+    /login status sequence (31 wrong-password requests): 401 x30, 429 x1
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:170:13)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+PASS tests/integration/security/v7-reactivate-ratelimit.test.js (49.497 s)
+  V7: /reactivate brute-force protection
+    √ repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within 10 attempts) (562 ms)
+    √ once limited, even the correct password is blocked and the account stays deactivated (448 ms)
+    √ V6 still holds before the limit: known + wrong password and unknown account both get 401 'Invalid credentials' (201 ms)
+  V7 control: /login is already rate-limited
+    √ POST /api/auth/login returns 429 after 30 wrong-password attempts (2804 ms)
+  V7 positive: legitimate reactivation still works
+    √ a self-deactivated patient reactivates with the correct password and can log in again (737 ms)
+
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+Test Suites: 5 passed, 5 total
+Tests:       123 passed, 123 total
+Snapshots:   0 total
+Time:        53.656 s
+Ran all test suites matching tests/integration/security.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+[jest exit code: 0]
