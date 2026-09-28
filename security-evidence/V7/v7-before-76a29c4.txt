@@ -1,0 +1,61 @@
+# V7 BEFORE evidence — captured 2026-09-26 16:55:24 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+76a29c4
+$ git status --short
+?? security-evidence/V7/
+?? server/tests/integration/security/v7-reactivate-ratelimit.test.js
+$ cd server && npx jest tests/integration/security/v7-reactivate-ratelimit.test.js --verbose
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.log
+    /reactivate status sequence (50 wrong-password requests): 401 x50
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:112:13)
+
+  console.log
+    /login status sequence (31 wrong-password requests): 401 x30, 429 x1
+
+      at Object.log (tests/integration/security/v7-reactivate-ratelimit.test.js:134:13)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+FAIL tests/integration/security/v7-reactivate-ratelimit.test.js (10.904 s)
+  V7: /reactivate brute-force protection
+    × repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within 50 attempts) (4315 ms)
+  V7 control: /login is already rate-limited
+    √ POST /api/auth/login returns 429 after 30 wrong-password attempts (2516 ms)
+  V7 positive: legitimate reactivation still works
+    √ a self-deactivated patient reactivates with the correct password and can log in again (569 ms)
+
+  ● V7: /reactivate brute-force protection › repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within 50 attempts)
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: 429
+    Received array: [401, 401, 401, 401, 401, 401, 401, 401, 401, 401, …]
+
+      117 |     expect(new Set(beforeLimit)).toEqual(new Set([401]));
+      118 |
+    > 119 |     expect(statuses).toContain(429);
+          |                      ^
+      120 |
+      121 |     // The account was never reactivated by guessing
+      122 |     expect((await User.findOne({ email: TARGET_EMAIL })).isActive).toBe(false);
+
+      at Object.toContain (tests/integration/security/v7-reactivate-ratelimit.test.js:119:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        10.97 s
+Ran all test suites matching tests/integration/security/v7-reactivate-ratelimit.test.js.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+[jest exit code: 1]

@@ -1,0 +1,66 @@
+# V6 regression check — 2026-09-26 16:53:38 UTC, branch inaam/v6-v7-oauth, HEAD f730ad2
+# Full backend suite (cd server && npx jest), run twice with the same test files:
+#   BASELINE = production files stashed (utils/otp.js, services/authService.js, controllers/patientController.js as in HEAD)
+#   AFTER    = working tree with the V6 fix
+
+BASELINE: Test Suites: 10 failed, 17 passed, 27 total
+BASELINE: Tests:       62 failed, 332 passed, 394 total
+AFTER:    Test Suites: 9 failed, 18 passed, 27 total
+AFTER:    Tests:       51 failed, 343 passed, 394 total
+
+## Failing AFTER but not BASELINE (regressions caused by the V6 fix):
+(none)
+
+## Failing BASELINE but not AFTER (fixed by V6):
+    × POST /email/send-verify-otp answers the same for unknown, unverified and already-verified accounts
+    × POST /email/verify-otp for an unknown account does not reveal 'User not found'
+    × POST /login with a wrong password returns the same 401 for a deactivated account and an unknown account
+    × POST /password/forgot answers the same for known and unknown accounts
+    × POST /password/reset for an unknown account does not reveal 'User not found'
+    × POST /reactivate answers the same 401 for a known account with a wrong password and an unknown account
+    × a failing email send is handled and does not cause an unhandled rejection
+    × generateOtp() does not use Math.random()
+    × generateOtp() draws from crypto.randomInt over the full 000000-999999 range
+    × positive: leading zeros are kept
+    × rejects a non-string password even when it wraps the correct one
+
+## Suites AFTER:
+FAIL tests/integration/admin/admin.test.js
+FAIL tests/integration/admin/admin.test.js
+FAIL tests/integration/appointment/appointment.test.js
+FAIL tests/integration/appointment/appointment.test.js
+FAIL tests/integration/patient/patient.test.js
+FAIL tests/integration/patient/patient.test.js
+FAIL tests/unit/admin/admin.test.js
+FAIL tests/unit/admin/admin.test.js
+FAIL tests/unit/appointment/appointment.test.js
+FAIL tests/unit/appointment/appointment.test.js
+FAIL tests/unit/appointment/appointmentService.test.js
+FAIL tests/unit/appointment/appointmentService.test.js
+FAIL tests/unit/appointment/appointmentValidator.test.js
+FAIL tests/unit/appointment/appointmentValidator.test.js
+FAIL tests/unit/doctor/doctorController.test.js
+FAIL tests/unit/doctor/doctorController.test.js
+FAIL tests/unit/patient/patient.test.js
+FAIL tests/unit/patient/patient.test.js
+PASS tests/integration/appointment/rating.test.js
+PASS tests/integration/doctor/chat.test.js
+PASS tests/integration/doctor/doctor.api.test.js
+PASS tests/integration/payment/payment.test.js
+PASS tests/integration/payment/receipt.test.js
+PASS tests/integration/security/v3-auth-exposure.test.js
+PASS tests/integration/security/v4-socket-authz.test.js
+PASS tests/integration/security/v6-enumeration-otp.test.js
+PASS tests/unit/appointment/appointmentController.test.js
+PASS tests/unit/appointment/authMiddleware.test.js
+PASS tests/unit/appointment/errorHandler.test.js
+PASS tests/unit/appointment/ratingService.test.js
+PASS tests/unit/appointment/validateRequest.test.js
+PASS tests/unit/doctor/doctorService.test.js
+PASS tests/unit/payment/paymentController.test.js
+PASS tests/unit/payment/paymentService.test.js
+PASS tests/unit/payment/paymentValidator.test.js
+PASS tests/unit/payment/receiptPdfService.test.js
+
+## The 51 remaining failures fail identically on the baseline and are outside V6
+## (patient/admin/appointment/doctor unit+integration suites); left untouched.

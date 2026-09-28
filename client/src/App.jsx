@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import GoogleCallback from "./pages/GoogleCallback";
 
 // Patient Pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
         {/* ================= PATIENT ROUTES ================= */}
         <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>

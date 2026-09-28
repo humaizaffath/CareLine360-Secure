@@ -1,0 +1,184 @@
+{
+  "label": "after-fix",
+  "capturedAt": "2026-09-26T05:07:49.198Z",
+  "results": [
+    {
+      "id": "V8-1",
+      "description": "Plain text uploaded as a PDF document",
+      "maliciousUpload": true,
+      "request": {
+        "declaredContentType": "application/pdf",
+        "actualFirstBytesHex": "506f433a20746869",
+        "actualFirstBytesText": "PoC: this is pla",
+        "method": "POST",
+        "url": "/api/documents",
+        "field": "document",
+        "filename": "report.pdf"
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "message": "File content does not match an allowed file type"
+        }
+      },
+      "uploadedToCloudinary": false,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "V8-2",
+      "description": "HTML page uploaded as a PDF document",
+      "maliciousUpload": true,
+      "request": {
+        "declaredContentType": "application/pdf",
+        "actualFirstBytesHex": "3c21646f63747970",
+        "actualFirstBytesText": "<!doctype html><",
+        "method": "POST",
+        "url": "/api/documents",
+        "field": "document",
+        "filename": "invoice.pdf"
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "message": "File content does not match an allowed file type"
+        }
+      },
+      "uploadedToCloudinary": false,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "V8-3",
+      "description": "PNG image bytes declared as a PDF document",
+      "maliciousUpload": true,
+      "request": {
+        "declaredContentType": "application/pdf",
+        "actualFirstBytesHex": "89504e470d0a1a0a",
+        "actualFirstBytesText": ".PNG........IHDR",
+        "method": "POST",
+        "url": "/api/documents",
+        "field": "document",
+        "filename": "lab-result.pdf"
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "message": "File content does not match the declared file type"
+        }
+      },
+      "uploadedToCloudinary": false,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "V8-4",
+      "description": "HTML page uploaded as the patient avatar (image/png)",
+      "maliciousUpload": true,
+      "request": {
+        "declaredContentType": "image/png",
+        "actualFirstBytesHex": "3c21646f63747970",
+        "actualFirstBytesText": "<!doctype html><",
+        "method": "PATCH",
+        "url": "/api/patients/me/avatar",
+        "field": "avatar",
+        "filename": "avatar.png"
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "message": "File content does not match an allowed file type"
+        }
+      },
+      "uploadedToCloudinary": false,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "V8-5",
+      "description": "HTML page sent as doctor base64 avatar (data:image/png)",
+      "maliciousUpload": true,
+      "request": {
+        "declaredContentType": "image/png",
+        "actualFirstBytesHex": "3c21646f63747970",
+        "actualFirstBytesText": "<!doctype html><",
+        "call": "uploadBase64Image (doctor PATCH avatar, base64 body)",
+        "dataUriPrefix": "data:image/png;base64,"
+      },
+      "response": {
+        "status": "rejected (service returns 400)",
+        "body": {
+          "message": "Image content does not match an allowed image type"
+        }
+      },
+      "uploadedToCloudinary": false,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "CTRL-1",
+      "description": "Control: genuine PDF document",
+      "maliciousUpload": false,
+      "request": {
+        "declaredContentType": "application/pdf",
+        "actualFirstBytesHex": "255044462d312e34",
+        "actualFirstBytesText": "%PDF-1.4.1 0 obj",
+        "method": "POST",
+        "url": "/api/documents",
+        "field": "document",
+        "filename": "report.pdf"
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "message": "Document uploaded",
+          "document": {
+            "fileName": "report.pdf",
+            "mimeType": "application/pdf",
+            "fileUrl": "https://res.cloudinary.com/<cloud>/careline360/documents/stored-file"
+          }
+        }
+      },
+      "uploadedToCloudinary": true,
+      "documentRecordsSaved": 1
+    },
+    {
+      "id": "CTRL-2",
+      "description": "Control: genuine PNG patient avatar",
+      "maliciousUpload": false,
+      "request": {
+        "declaredContentType": "image/png",
+        "actualFirstBytesHex": "89504e470d0a1a0a",
+        "actualFirstBytesText": ".PNG........IHDR",
+        "method": "PATCH",
+        "url": "/api/patients/me/avatar",
+        "field": "avatar",
+        "filename": "avatar.png"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "message": "Avatar updated",
+          "avatarUrl": "https://res.cloudinary.com/<cloud>/careline360/avatars/stored-file"
+        }
+      },
+      "uploadedToCloudinary": true,
+      "documentRecordsSaved": 0
+    },
+    {
+      "id": "CTRL-3",
+      "description": "Control: genuine PNG doctor base64 avatar",
+      "maliciousUpload": false,
+      "request": {
+        "declaredContentType": "image/png",
+        "actualFirstBytesHex": "89504e470d0a1a0a",
+        "actualFirstBytesText": ".PNG........IHDR",
+        "call": "uploadBase64Image (doctor PATCH avatar, base64 body)",
+        "dataUriPrefix": "data:image/png;base64,"
+      },
+      "response": {
+        "status": "accepted",
+        "body": {
+          "url": "https://res.cloudinary.com/<cloud>/careline360/avatars/stored-file"
+        }
+      },
+      "uploadedToCloudinary": true,
+      "documentRecordsSaved": 0
+    }
+  ]
+}

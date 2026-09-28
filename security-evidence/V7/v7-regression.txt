@@ -1,0 +1,64 @@
+# V7 regression check — 2026-09-26 17:59:32 UTC, branch inaam/v6-v7-oauth, HEAD 7b8fe6a
+# Full backend suite (cd server && npx jest), run twice with the same test files:
+#   BASELINE = server/routes/authRoutes.js stashed (as in HEAD, no reactivation limiter)
+#   AFTER    = working tree with the V7 fix
+
+BASELINE: Test Suites: 10 failed, 18 passed, 28 total
+BASELINE: Tests:       53 failed, 346 passed, 399 total
+AFTER:    Test Suites: 9 failed, 19 passed, 28 total
+AFTER:    Tests:       51 failed, 348 passed, 399 total
+
+## Failing AFTER but not BASELINE (regressions caused by the V7 fix):
+(none)
+
+## Failing BASELINE but not AFTER (fixed by V7):
+    × once limited, even the correct password is blocked and the account stays deactivated
+    × repeated wrong-password POST /api/auth/reactivate is eventually answered with 429 (within 10 attempts)
+
+## Security suites AFTER:
+PASS tests/integration/security/v3-auth-exposure.test.js
+PASS tests/integration/security/v4-socket-authz.test.js
+PASS tests/integration/security/v6-enumeration-otp.test.js
+PASS tests/integration/security/v7-reactivate-ratelimit.test.js
+
+## All suites AFTER:
+FAIL tests/integration/admin/admin.test.js
+FAIL tests/integration/admin/admin.test.js
+FAIL tests/integration/appointment/appointment.test.js
+FAIL tests/integration/appointment/appointment.test.js
+FAIL tests/integration/patient/patient.test.js
+FAIL tests/integration/patient/patient.test.js
+FAIL tests/unit/admin/admin.test.js
+FAIL tests/unit/admin/admin.test.js
+FAIL tests/unit/appointment/appointment.test.js
+FAIL tests/unit/appointment/appointment.test.js
+FAIL tests/unit/appointment/appointmentService.test.js
+FAIL tests/unit/appointment/appointmentService.test.js
+FAIL tests/unit/appointment/appointmentValidator.test.js
+FAIL tests/unit/appointment/appointmentValidator.test.js
+FAIL tests/unit/doctor/doctorController.test.js
+FAIL tests/unit/doctor/doctorController.test.js
+FAIL tests/unit/patient/patient.test.js
+FAIL tests/unit/patient/patient.test.js
+PASS tests/integration/appointment/rating.test.js
+PASS tests/integration/doctor/chat.test.js
+PASS tests/integration/doctor/doctor.api.test.js
+PASS tests/integration/payment/payment.test.js
+PASS tests/integration/payment/receipt.test.js
+PASS tests/integration/security/v3-auth-exposure.test.js
+PASS tests/integration/security/v4-socket-authz.test.js
+PASS tests/integration/security/v6-enumeration-otp.test.js
+PASS tests/integration/security/v7-reactivate-ratelimit.test.js
+PASS tests/unit/appointment/appointmentController.test.js
+PASS tests/unit/appointment/authMiddleware.test.js
+PASS tests/unit/appointment/errorHandler.test.js
+PASS tests/unit/appointment/ratingService.test.js
+PASS tests/unit/appointment/validateRequest.test.js
+PASS tests/unit/doctor/doctorService.test.js
+PASS tests/unit/payment/paymentController.test.js
+PASS tests/unit/payment/paymentService.test.js
+PASS tests/unit/payment/paymentValidator.test.js
+PASS tests/unit/payment/receiptPdfService.test.js
+
+## The 51 remaining failures are the same set recorded in security-evidence/V6/v6-regression.txt
+## (patient/admin/appointment/doctor unit+integration suites); outside V7 and left untouched.

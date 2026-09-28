@@ -1,5 +1,6 @@
 const { validationResult } = require("express-validator");
 const { registerUser, loginUser, refreshAccessToken, logoutUser , sendEmailVerificationOtp, verifyEmailOtp, sendPasswordResetOtp, resetPasswordWithOtp } = require("../services/authService");
+const { signInWithGoogle } = require("../services/googleAuthService");
 
 const register = async (req, res) => {
   const errors = validationResult(req);
@@ -47,6 +48,26 @@ const resetPassword = async (req, res) => {
   return res.status(result.status).json(result.data);
 };
 
+const googleLogin = async (req, res) => {
+  // Field names only: never echo the code, verifier or nonce back
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      message: "Invalid Google sign-in request",
+      errors: errors.array().map((e) => ({ field: e.path, msg: e.msg })),
+    });
+  }
+
+  try {
+    const { code, codeVerifier, redirectUri, nonce } = req.body;
+    const result = await signInWithGoogle({ code, codeVerifier, redirectUri, nonce });
+    return res.status(result.status).json(result.data);
+  } catch (e) {
+    console.error("Google sign-in error:", e?.name || "Error");
+    return res.status(500).json({ message: "Google sign-in failed" });
+  }
+};
+
 
 module.exports = { register, 
             login, 
@@ -54,5 +75,6 @@ module.exports = { register,
             logout, 
             sendVerifyEmailOtp, 
             confirmVerifyEmailOtp, 
-            forgotPassword, 
-            resetPassword };
+            forgotPassword,
+            resetPassword,
+            googleLogin };
