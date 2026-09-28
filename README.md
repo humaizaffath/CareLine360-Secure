@@ -1,539 +1,397 @@
-# CareLine360
+# CareLine360 – Secure Software Development
 
-A full-stack **MERN** web application for remote medical consultation and emergency assistance — connecting patients, doctors, responders, and administrators on a single healthcare platform.
+SE4030 Secure Software Development – Assignment 1, **Group 60** (Sri Lanka Institute of Information Technology).
 
----
+We took the existing CareLine360 MERN healthcare application, found security vulnerabilities in it, fixed them, and added Google sign-in using OAuth 2.0 / OpenID Connect.
 
-## Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [API Endpoints](#api-endpoints)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributors](#contributors)
-- [License](#license)
+| Item | Link |
+|---|---|
+| Original repository | https://github.com/clerin-codes/CareLine360-WebApp-MERN |
+| Secured repository | https://github.com/humaizaffath/CareLine360-Secure |
+| Integration branch | `integration-branch` (all team security work; merged into `main` for submission) |
+| YouTube demonstration | https://youtu.be/RUGYF3S98M |
 
 ---
 
-## Features
+## 1. Project Overview
 
-### Patient Portal
+CareLine360 is a web platform for remote medical consultation and emergency assistance. It serves four roles:
 
-- Book in-person / video / phone consultations with doctors
-- Real-time chat with doctors during appointments (Socket.io)
-- AI-powered medical assistant (Gemini + Groq)
-- Upload & manage medical documents (Cloudinary storage)
-- View medical history, prescriptions & payment receipts (PDF generation)
-- SOS emergency case submission with GPS coordinates
-- Profile strength indicator for completion tracking
+- **Patients** book in-person, video or phone appointments, chat with their doctor in real time, upload medical documents, pay for consultations and raise SOS emergency cases with GPS location.
+- **Doctors** manage availability, appointments, prescriptions and medical records, and chat with patients.
+- **Responders** handle emergency cases and find the nearest hospital.
+- **Administrators** manage users, doctors, hospitals and meeting links.
 
-### Doctor Portal
+The application uses a React client, a Node.js/Express server and MongoDB. Users are identified with JWT authentication, and Socket.IO provides real-time chat. Because the application handles health data, identity data, location data and payments, access control and authentication are its most important security properties.
 
-- Manage availability slots and consultation fees
-- View upcoming appointments with auto-generated Jitsi meeting links
-- In-appointment chat, prescriptions & medical records
-- Rating & review system per appointment
-- Analytics dashboard with appointment statistics
+## 2. Technology Stack
 
-### Admin Dashboard
+| Layer | Technologies |
+|---|---|
+| Frontend | React 19, Vite 7, React Router 7, Tailwind CSS 4, Axios, Socket.IO client |
+| Backend | Node.js, Express 5, Socket.IO 4, express-validator, express-rate-limit, Helmet, CORS |
+| Database | MongoDB with Mongoose 9 |
+| Authentication | JWT access and refresh tokens, bcryptjs, Google OpenID Connect (`google-auth-library`) with PKCE |
+| Files and messaging | Cloudinary (file storage), Multer, PDFKit (receipts and prescriptions), Resend / Nodemailer (email), SMSLenz (SMS) |
+| Testing | Jest, Supertest, mongodb-memory-server, Node.js built-in test runner (frontend PKCE tests) |
 
-- User management (CRUD, status toggle, role assignment)
-- Appointment meeting link assignment
-- Analytics & report generation (PDF / CSV / Excel)
-- Emergency case monitoring with dispatcher controls
-- Email & SMS notifications (Resend + SMSLenz)
+## 3. Group Members
 
-### Emergency & Responder
+| Member | Index Number | Security area | Contribution |
+|---|---|---|---|
+| Affath | IT23330146 | Appointment security | V1 – IDOR / Broken Object Level Authorization; V2 – Mass Assignment |
+| Umair | IT23274716 | API and real-time access security | V3 – Missing Authentication and Sensitive Data Exposure; V4 – Socket.IO Room Authorization |
+| Inaam | IT23231146 | Authentication and OAuth/OIDC security | V6 – User Enumeration and Weak OTP; V7 – Missing Rate Limiting on Account Reactivation; Google OAuth 2.0 / OpenID Connect sign-in |
+| Bishru | IT22115102 | File upload and dependency security | V8 – Insecure File Upload; V10 – Vulnerable Dependencies |
 
-- Emergency case lifecycle: **PENDING -> DISPATCHED -> ARRIVED -> RESOLVED**
-- Nearest hospital lookup by GPS coordinates
-- Responder-specific dashboard with case assignments
+Contributions are taken from the group's vulnerability document, the commit history of `integration-branch`, and the evidence in [`security-evidence/`](security-evidence/).
 
-### Real-Time Features
+## 4. Original Repository
 
-- Socket.io appointment-scoped chat with typing indicators
-- Background cron schedulers for meeting reminders (10 min before) and appointment reminders (24 hrs before)
+https://github.com/clerin-codes/CareLine360-WebApp-MERN
 
----
+This is the unmodified CareLine360 application that this project started from. The last original commit included here is `e5a15e4` (12 Apr 2026).
 
-## Tech Stack
+## 5. Secured Repository
 
-| Layer            | Technology                                               |
-| ---------------- | -------------------------------------------------------- |
-| **Frontend**     | React 19, Vite 7, Tailwind CSS 4, React Router 7         |
-| **Backend**      | Node.js, Express 5, Mongoose (MongoDB)                   |
-| **Real-Time**    | Socket.io 4                                              |
-| **Auth**         | JWT (access + refresh tokens), role-based access control |
-| **File Storage** | Cloudinary                                               |
-| **Email**        | Resend API                                               |
-| **SMS**          | SMSLenz API                                              |
-| **AI**           | Google Gemini API, Groq API                              |
-| **PDF**          | jsPDF (client), PDFKit (server)                          |
-| **Maps**         | Leaflet / React-Leaflet                                  |
-| **Charts**       | Chart.js / react-chartjs-2                               |
-| **Video**        | Jitsi Meet (auto-generated meeting links)                |
-| **Testing**      | Jest, Supertest, mongodb-memory-server, Artillery.io     |
+https://github.com/humaizaffath/CareLine360-Secure
 
----
+- Each member worked on their own branch.
+- All security work was merged into `integration-branch`, and from there into `main` for submission.
+- Each security change can be traced to its commits and tests. Detailed evidence is in `security-evidence/`.
 
-## Project Structure
+## 6. Security Vulnerabilities Addressed
 
-```
-CareLine360-WebApp-MERN/
-├── client/                   # React frontend (Vite)
-│   └── src/
-│       ├── api/              # Axios API modules
-│       ├── auth/             # Auth storage & helpers
-│       ├── components/       # Reusable UI components
-│       ├── context/          # React Context providers (Theme, User, Toast)
-│       ├── layouts/          # Layout wrappers (Admin, Doctor, Patient)
-│       ├── pages/            # Route-level page components
-│       ├── routes/           # React Router config & ProtectedRoute
-│       ├── socket/           # Socket.io client setup
-│       └── utils/            # Helpers & constants
-├── server/                   # Express backend
-│   ├── config/               # DB & Cloudinary config
-│   ├── controllers/          # Route handler logic
-│   ├── middleware/            # Auth, upload, validation, error handling
-│   ├── models/               # Mongoose schemas (15 models)
-│   ├── routes/               # Express route definitions
-│   ├── services/             # Business logic layer
-│   ├── socket/               # Socket.io event handlers
-│   ├── validators/           # Express-validator schemas
-│   ├── utils/                # Helpers (OTP, tokens, distance)
-│   ├── tests/                # Unit, integration & performance tests
-│   └── server.js             # App entry point
-├── postman/                  # Postman collection & environment
-└── README.md
-```
+The IDs follow the group's vulnerability plan. Only fixes that are implemented in this repository are listed. V5, V9 and V11 were identified but not fixed; see [Known Limitations](#11-known-limitations).
 
----
+**Summary**
 
-## Getting Started
+| ID | Vulnerability | OWASP Top 10 (2021) | CWE | Member |
+|---|---|---|---|---|
+| V1 | IDOR / Broken Object Level Authorization (appointments) | A01 Broken Access Control | CWE-639 | Affath |
+| V2 | Mass Assignment (appointment create/update) | A08 Software and Data Integrity Failures | CWE-915 | Affath |
+| V3 | Missing Authentication and Sensitive Data Exposure | A01 Broken Access Control; A07 Identification and Authentication Failures | CWE-306, CWE-200, CWE-639 | Umair |
+| V4 | Socket.IO Room Authorization | A01 Broken Access Control | CWE-862, CWE-639 | Umair |
+| V6 | User / Account Enumeration and Weak OTP | A07 Identification and Authentication Failures | CWE-203, CWE-204, CWE-338 | Inaam |
+| V7 | Missing Rate Limiting on Account Reactivation | A07 Identification and Authentication Failures | CWE-307 | Inaam |
+| V8 | Insecure File Upload | A04 Insecure Design | CWE-434 | Bishru |
+| V10 | Vulnerable Dependencies | A06 Vulnerable and Outdated Components | CWE-1395 | Bishru |
 
-### Prerequisites
+### V1 – IDOR / Broken Object Level Authorization (Affath)
 
-- **Node.js** >= 18
-- **MongoDB** (local or Atlas)
-- **Resend** account (for email notifications)
+**OWASP A01:2021 · CWE-639**
 
-### Installation
+- **Original issue:** the appointment service loaded appointments by ID without checking whether the logged-in user was allowed to access them. The same gap affected updating, cancelling, deleting, rescheduling and status changes. The appointment list trusted `patient` and `doctor` identifiers supplied by the client.
+- **Why it was a security issue:** any logged-in user who knew an appointment ID could read, modify, cancel, delete or reschedule another patient's appointment. A client could also list other users' appointments by changing the list filters. Restrictions in the user interface gave no server-side protection.
+- **Fix:**
+  - The controller passes the authenticated user from the verified JWT (`req.user`) to the service.
+  - The service checks that this user is a participant in the appointment before any operation.
+  - Patients can only use their own appointments. Doctors can only use appointments assigned to them, and only the assigned doctor can change the status.
+  - Lists are scoped by the caller's identity: patients see their own, doctors see their assigned ones, admins see all, and other roles are refused (`403`).
+  - Unauthorized access returns the same `404` as a missing appointment, so appointment IDs cannot be probed.
+- **Files:** `server/services/appointmentService.js`, `server/controllers/appointmentController.js`, and their unit tests.
+
+### V2 – Mass Assignment (Affath)
+
+**OWASP A08:2021 · CWE-915**
+
+- **Original issue:** appointment creation and update passed the complete request body to the database.
+- **Why it was a security issue:** a patient could include server-controlled properties such as `status`, `patient`, `meetingUrl`, `reminderSent`, `cancellationReason` or `rescheduleHistory`. For example, they could create an appointment that was already confirmed. Any new server-side field would also have become client-controlled.
+- **Fix:**
+  - Explicit allow-lists: `CREATE_FIELDS` and `UPDATE_FIELDS`.
+  - A `pickFields()` helper copies only permitted properties before data reaches the database.
+  - The patient identity always comes from the authenticated user, never from the request body.
+  - `doctor` can be chosen when booking, but it isn't in `UPDATE_FIELDS`, so an existing appointment can't be reassigned to another doctor.
+- **Files:** `server/services/appointmentService.js`, `server/controllers/appointmentController.js`, and their unit tests.
+
+### V3 – Missing Authentication and Sensitive Data Exposure (Umair)
+
+**OWASP A01:2021, A07:2021 · CWE-306, CWE-200, CWE-639**
+
+- **Original issue:** `/api/users`, `/api/emergency` and `/api/payments` were mounted without authentication. The users API returned `refreshTokenHash`. Payment responses populated the full patient document, including `passwordHash` and `refreshTokenHash`.
+- **Why it was a security issue:** without logging in, anyone could:
+  - read users and emergency cases, including patient contact details and location;
+  - create emergency cases for other patients and change their dispatch status;
+  - read, create, verify or fail payments.
+
+  Some responses also disclosed credential-derived hashes.
+- **Fix:**
+  - **Authentication and role rules on all three routers.** Admins can list users. Other users see only the limited doctor directory or their own record.
+  - **Emergency cases.** Patients can raise an SOS only for themselves. Admins and responders handle case access and status.
+  - **Payments.** A patient can pay only for their own appointment. Payment access is limited to its patient, the appointment's doctor or an admin.
+  - **Safe response fields.** Responses use explicit field lists; populated patient data contains only `fullName`, `email` and `phone`.
+  - **Server-set identity.** The patient and payer are taken from the authenticated caller.
+- **Evidence:** [`security-evidence/V3`](security-evidence/V3/README.md) and [`UMAIR-V3-V4-REPORT.md`](security-evidence/UMAIR-V3-V4-REPORT.md).
+
+### V4 – Socket.IO Room Authorization (Umair)
+
+**OWASP A01:2021 · CWE-862, CWE-639**
+
+- **Original issue:**
+  - `join_room` joined whatever appointment room ID the client sent, without checking that the user was that appointment's patient or doctor.
+  - `typing` and `stop_typing` were relayed to any room the client named.
+  - A valid token for a deactivated account was accepted at the socket handshake.
+- **Why it was a security issue:** any logged-in non-participant who knew an appointment ID could join a private consultation. They could receive live messages and typing indicators, and inject fake typing indicators. A deactivated user could still connect while their JWT remained valid.
+- **Fix:**
+  - **Room ID and access check.** `join_room` validates the appointment ID and runs the existing chat access check before `socket.join`.
+  - **Typing events.** They are sent only to rooms the socket has joined.
+  - **Handshake.** It loads the account, rejects missing or deactivated users, and reads the role from the database.
+- **Evidence:** [`security-evidence/V4`](security-evidence/V4/README.md).
+
+### V6 – User / Account Enumeration and Weak OTP (Inaam)
+
+**OWASP A07:2021 · CWE-203, CWE-204, CWE-338**
+
+- **Original issue:** the authentication and verification endpoints answered differently for existing and non-existing accounts: forgot-password, email verification, reactivation and login. OTPs were generated with `Math.random()`.
+- **Why it was a security issue:** an attacker could find out whether an email or phone number is registered with a healthcare service. Predictable OTPs weakened email verification and password reset.
+- **Fix:**
+  - Sensitive authentication responses were made identical for existing and unknown accounts.
+  - The password is checked before any account state (such as "deactivated") is revealed.
+  - Six-digit OTPs are generated with `crypto.randomInt()`.
+- **Evidence:** [`security-evidence/V6`](security-evidence/V6/README.md).
+
+### V7 – Missing Rate Limiting on Account Reactivation (Inaam)
+
+**OWASP A07:2021 · CWE-307**
+
+- **Original issue:** `POST /api/auth/reactivate` checks a password but had no dedicated rate limiter.
+- **Why it was a security issue:** repeated reactivation requests could be used for unlimited password guessing.
+- **Fix:**
+  - A dedicated reactivation limiter allows five attempts per IP address in fifteen minutes.
+  - Later attempts are rejected with HTTP `429` before the password is checked.
+- **Evidence:** [`security-evidence/V7`](security-evidence/V7/README.md).
+
+### V8 – Insecure File Upload (Bishru)
+
+**OWASP A04:2021 · CWE-434**
+
+- **Original issue:** files are uploaded in three places:
+  - patient medical documents: `POST /api/documents`;
+  - patient avatar: `PATCH /api/patients/me/avatar`;
+  - doctor avatar, sent as base64: `PUT /api/doctor/profile/avatar`.
+
+  Each one decided whether a file was allowed using only client-supplied information: the request's `Content-Type`, or the `data:` prefix of the base64 string. Files were streamed straight to Cloudinary, so the server never examined their actual content.
+- **Why it was a security issue:**
+  - A logged-in user could upload an HTML page, plain text or another file labelled as a PDF or image.
+  - That file would be stored under trusted Cloudinary URLs and listed as a medical document that doctors open, allowing phishing content to be delivered from the application's own storage.
+  - Stored medical records could no longer be trusted.
+- **Fix:**
+  - Uploads are held in memory and validated on the server before anything is sent to Cloudinary.
+  - The file type is detected from the file's magic bytes. A file is accepted only if the detected type is on the endpoint's allow-list, matches the declared MIME type, and matches the file extension. Otherwise the request is rejected with `400`.
+  - Base64 doctor avatars are decoded and checked the same way.
+  - Existing allow-lists, size limits, Cloudinary folders and transformations are preserved.
+- **Evidence:** [`security-evidence/V8`](security-evidence/V8/README.md).
+
+### V10 – Vulnerable Dependencies (Bishru)
+
+**OWASP A06:2021 · CWE-1395**
+
+- **Original issue:** `npm audit` on the server reported 28 known vulnerabilities (17 high, 9 moderate, 2 low). They were in direct dependencies (`nodemailer`, `cloudinary`, `multer-storage-cloudinary`, `multer`, `express-rate-limit`, `mongoose`) and in transitive dependencies of Express and Socket.IO.
+- **Why it was a security issue:** attackers could exploit publicly documented issues without finding a flaw in CareLine360's own code:
+  - resource exhaustion that makes the API or chat unavailable;
+  - email header or SMTP command injection;
+  - bypassing the login rate limit using IPv4-mapped IPv6 addresses.
+- **Fix:**
+  - Compatible updates with `npm audit fix` (not `--force`).
+  - Reviewed upgrades: `nodemailer` to 9.1.1 and `cloudinary` to 2.x.
+  - Removed the unused `multer-storage-cloudinary`.
+  - Kept `mongoose` on a patched 9.7.x release for test-setup compatibility.
+  - `npm audit` now reports 0 vulnerabilities, and the existing test results are unchanged.
+- **Evidence:** [`security-evidence/V10`](security-evidence/V10/README.md).
+
+**Additional fix found during the OAuth work (Inaam).** Refresh tokens were stored as `bcrypt(token)`, but bcrypt only reads the first 72 bytes, which are shared by all of a user's refresh tokens. An older token therefore still matched after a new login. Tokens are now stored as `bcrypt(SHA-256(token))` with a random `jti`, so a new login or password reset ends the previous session. See [`security-evidence/OAUTH`](security-evidence/OAUTH/README.md).
+
+## 7. OAuth / OpenID Connect Feature
+
+Patients can sign in with **Google** using **OpenID Connect** with the **Authorization Code flow and PKCE (S256)**. This was implemented by Inaam. Full details are in [`security-evidence/OAUTH/README.md`](security-evidence/OAUTH/README.md).
+
+**Flow**
+
+1. On the login page, the browser uses the Web Crypto API to generate a random `state`, a `nonce` and a PKCE `code_verifier`. These are stored in `sessionStorage` for this one sign-in attempt. The browser then redirects to Google with the `code_challenge` (SHA-256 of the verifier), `state`, `nonce` and scope `openid email profile`.
+2. Google redirects back to `/auth/google/callback`.
+   - The page checks that `state` matches, then uses and clears the stored transaction so it can't be reused.
+   - A mismatched `state`, an error from Google or a missing code stops the flow before any API call.
+3. The browser sends `{code, codeVerifier, redirectUri, nonce}` to `POST /api/auth/oauth/google`.
+4. The backend:
+   - checks the redirect URI against an exact allowlist;
+   - exchanges the code with Google using the verifier and the **server-only client secret**;
+   - verifies the ID token (signature, issuer, audience, expiry, `email_verified === true`, nonce).
+5. The backend finds, links or creates a **patient** account and issues the normal CareLine360 JWT access and refresh tokens.
+
+**Components**
+
+| Side | Files |
+|---|---|
+| Backend | `server/services/googleAuthService.js`, `server/routes/authRoutes.js` (`POST /api/auth/oauth/google`), `server/controllers/authController.js`, `server/models/User.js` (`googleSub`), `server/services/authService.js` |
+| Frontend | `client/src/auth/pkce.js`, `client/src/components/GoogleSignInButton.jsx`, `client/src/pages/GoogleCallback.jsx`, `client/src/pages/Login.jsx`, `client/src/App.jsx` |
+
+**Security properties**
+
+- The client secret exists only on the server. The browser has only the public client ID.
+- PKCE, `state` and `nonce` protect against code interception, login CSRF and token replay.
+- Identity comes only from the **verified** ID token (`sub`, `email`, `name`). Role and email are never taken from the request body.
+- Google sign-in is **patient-only**. Doctor, admin and responder accounts with a matching email are refused and left unchanged.
+- **Pre-account-takeover defence:** an existing unverified local account with the same email is linked, and its password and sessions are invalidated.
+- Deactivated, pending, rejected or suspended accounts are refused with `403`, the same as password login.
+- Google's access, refresh and ID tokens are never stored, returned or logged; only `googleSub` is stored.
+
+**Standards:** RFC 7636 (PKCE), RFC 9700 (OAuth 2.0 Security Best Current Practice), OpenID Connect Core 1.0.
+
+## 8. Testing and Verification
+
+The following methods were actually used. No OWASP ZAP or other external scanner results are claimed.
+
+- **Automated security regression tests** (Jest, Supertest, in-memory MongoDB, synthetic users):
+  - Each test sends the attack and expects it to be blocked, and also checks that legitimate use still works.
+  - The evidence READMEs record that these tests fail on the pre-fix code and pass on the fix.
+- **Proof-of-concept scripts** that run the same requests before and after each fix, with the outputs saved as evidence. No real credentials, tokens or personal data are recorded.
+  - V3: `security-evidence/V3/capture-evidence.js`
+  - V4: `security-evidence/V4/poc-socket.js`
+  - V8: `security-evidence/V8/capture-evidence.js`
+- **End-to-end checks** against the real `server.js` with real login tokens:
+  - `security-evidence/e2e-v3-v4-check.js`
+  - `security-evidence/V10/smoke-test.js`, which runs against local Cloudinary and SMTP stand-ins.
+- **Dependency audit**: `npm audit` before and after V10.
+- **Secret scan** of the frontend source and production build, to confirm the Google client secret never reaches the browser.
+- **Regression comparison**: the full backend suite was run before and after each fix to confirm no new failures.
+
+**Results** (run on 28 Sep 2026 against `integration-branch` at `d54a0f6`)
+
+| Area | Command (from `server/` unless noted) | Result |
+|---|---|---|
+| V3, V4, V6, V7 and OAuth security suites | `npx jest tests/integration/security` | 123 / 123 passed (V3 32, V4 17, V6 19, V7 5, OAuth 50) |
+| V8 upload security | `npx jest tests/unit/upload tests/integration/upload` | 23 / 23 passed |
+| V1 and V2 appointment tests | `npx jest tests/unit/appointment/appointmentService.test.js tests/unit/appointment/appointmentController.test.js` | 82 / 82 passed (23 of them V1-specific). Both V2 mass-assignment tests pass. |
+| V10 dependency audit | `npm audit` | found 0 vulnerabilities |
+| OAuth PKCE (frontend) | `cd client && node --test tests/pkce.test.mjs` | 24 / 24 passed (includes the RFC 7636 test vector) |
+| Full backend suite | `npm test` | 446 / 495 passed; all 49 failures predate the security work (see [Known Limitations](#11-known-limitations)) |
+
+**V1 tests cover:**
+
+- the owner and the assigned doctor can still access the appointment;
+- another patient gets `404` on read, update, delete, cancel and reschedule, with no change saved;
+- an unassigned doctor can't read, delete or change status;
+- a spoofed list filter is overwritten;
+- other roles get `403`.
+
+**V2 tests cover:** server-controlled fields (`status`, `patient`, `meetingUrl`, `reminderSent`) are ignored on create, and `doctor`, `patient` and `status` can't be changed through an update.
+
+## 9. Installation and Setup
+
+**Prerequisites:**
+
+- Node.js 20 or later (recommended)
+- MongoDB (local or Atlas)
+- Accounts for Cloudinary and Resend
+- A Google Cloud OAuth client, for Google sign-in
 
 ```bash
-# Clone the repository
-git clone https://github.com/shajana9/CareLine360-WebApp-MERN.git
-cd CareLine360-WebApp-MERN
+git clone https://github.com/humaizaffath/CareLine360-Secure.git
+cd CareLine360-Secure
+```
 
-# Install server dependencies
+### Backend
+
+```bash
 cd server
 npm install
-
-# Install client dependencies
-cd ../client
-npm install
+cp .env.example .env     # then fill in the values (see section 10)
+npm run dev              # development (nodemon), http://localhost:1111
+# or
+npm start                # production
 ```
 
-### Configuration
-
-Copy the example env files and fill in your credentials:
+### Frontend
 
 ```bash
-cp server/.env.example server/.env
-cp client/.env.example client/.env
-```
-
-### Run Development Servers
-
-```bash
-# Terminal 1 — Backend (port 1111)
-cd server
-npm run dev
-
-# Terminal 2 — Frontend (port 5173)
 cd client
-npm run dev
+npm install
+cp .env.example .env     # then fill in the values (see section 10)
+npm run dev              # http://localhost:5173
+npm run build            # production build
 ```
 
----
-
-## Environment Variables
-
-### Server (`server/.env`)
-
-| Variable                | Description                                  |
-| ----------------------- | -------------------------------------------- |
-| `PORT`                  | Server port (default: `1111`)                |
-| `MONGO_URI`             | MongoDB connection string                    |
-| `NODE_ENV`              | `development` or `production`                |
-| `CLIENT_URL`            | Frontend URL for CORS                        |
-| `JWT_ACCESS_SECRET`     | Access token signing key                     |
-| `JWT_REFRESH_SECRET`    | Refresh token signing key                    |
-| `JWT_EXPIRE`            | Token expiry duration (e.g. `7d`)            |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name                       |
-| `CLOUDINARY_API_KEY`    | Cloudinary API key                           |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret                        |
-| `RESEND_API_KEY`        | Resend API key for email notifications       |
-| `EMAIL_FROM`            | Sender email (e.g. `onboarding@resend.dev`)  |
-| `EMAIL_OVERRIDE_TO`     | Override all emails to this address (dev only)|
-| `GEMINI_API_KEY`        | Google Gemini API key                        |
-| `SMSLENZ_USER_ID`       | SMSLenz user ID                              |
-| `SMSLENZ_API_KEY`       | SMSLenz API key                              |
-
-### Client (`client/.env`)
-
-| Variable            | Description                                                 |
-| ------------------- | ----------------------------------------------------------- |
-| `VITE_API_URL`      | Backend API base URL (default: `http://localhost:1111/api`) |
-| `VITE_GROQ_API_KEY` | Groq API key for AI chat                                    |
-
----
-
-## API Endpoints
-
-### Authentication (`/api/auth`)
-
-| Method | Endpoint                      | Auth | Description                     |
-| ------ | ----------------------------- | ---- | ------------------------------- |
-| POST   | `/api/auth/register`          | No   | Register a new user             |
-| POST   | `/api/auth/login`             | No   | Login and receive tokens        |
-| POST   | `/api/auth/refresh`           | No   | Refresh access token            |
-| POST   | `/api/auth/logout`            | Yes  | Logout and invalidate token     |
-| GET    | `/api/auth/me`                | Yes  | Get current authenticated user  |
-| POST   | `/api/auth/email/send-verify-otp` | No | Send email verification OTP |
-| POST   | `/api/auth/email/verify-otp`  | No   | Verify email OTP                |
-| POST   | `/api/auth/password/forgot`   | No   | Request password reset OTP      |
-| POST   | `/api/auth/password/reset`    | No   | Reset password with OTP         |
-| POST   | `/api/auth/reactivate`        | No   | Reactivate deactivated account  |
-
-### Appointments (`/api/appointments`)
-
-| Method | Endpoint                              | Auth   | Description                     |
-| ------ | ------------------------------------- | ------ | ------------------------------- |
-| POST   | `/api/appointments`                   | Patient | Create a new appointment       |
-| GET    | `/api/appointments`                   | Yes    | List appointments (filterable)  |
-| GET    | `/api/appointments/stats`             | Yes    | Get appointment statistics      |
-| GET    | `/api/appointments/:id`               | Yes    | Get appointment by ID           |
-| PUT    | `/api/appointments/:id`               | Yes    | Update appointment details      |
-| DELETE | `/api/appointments/:id`               | Yes    | Delete an appointment           |
-| PATCH  | `/api/appointments/:id/status`        | Doctor | Transition appointment status   |
-| PATCH  | `/api/appointments/:id/reschedule`    | Yes    | Reschedule appointment          |
-| PATCH  | `/api/appointments/:id/cancel`        | Yes    | Cancel appointment with reason  |
-| POST   | `/api/appointments/:id/rating`        | Patient | Submit rating for appointment  |
-| GET    | `/api/appointments/:id/rating`        | Yes    | Get appointment rating          |
-
-### Chat (`/api/chat`)
-
-| Method | Endpoint                       | Auth | Description                           |
-| ------ | ------------------------------ | ---- | ------------------------------------- |
-| GET    | `/api/chat/inbox`              | Yes  | Chat inbox with last messages         |
-| GET    | `/api/chat/unread/count`       | Yes  | Total unread message count            |
-| GET    | `/api/chat/:appointmentId`     | Yes  | Message history for an appointment    |
-
-> Real-time messaging is handled via Socket.io events: `join_room`, `send_message`, `new_message`
-
-### Payments (`/api/payments`)
-
-| Method | Endpoint                                | Auth | Description                    |
-| ------ | --------------------------------------- | ---- | ------------------------------ |
-| POST   | `/api/payments`                         | Yes  | Create a payment               |
-| GET    | `/api/payments/appointment/:appointmentId` | Yes | Get payment by appointment  |
-| GET    | `/api/payments/:id`                     | Yes  | Get payment by ID              |
-| PATCH  | `/api/payments/:id/verify`              | Yes  | Verify a payment               |
-| PATCH  | `/api/payments/:id/fail`                | Yes  | Mark payment as failed         |
-| GET    | `/api/payments/:id/receipt`             | Yes  | Generate & download PDF receipt|
-
-### Patients (`/api/patients`)
-
-| Method | Endpoint                        | Auth    | Description                     |
-| ------ | ------------------------------- | ------- | ------------------------------- |
-| GET    | `/api/patients/me`              | Patient | Get my profile                  |
-| PATCH  | `/api/patients/me`              | Patient | Update my profile               |
-| PATCH  | `/api/patients/me/avatar`       | Patient | Upload avatar                   |
-| DELETE | `/api/patients/me/avatar`       | Patient | Remove avatar                   |
-| PATCH  | `/api/patients/me/deactivate`   | Patient | Deactivate account              |
-| POST   | `/api/patients/me/ai-explain`   | Patient | AI medical text explanation     |
-| GET    | `/api/patients/me/medical-record`| Patient | Get my medical records         |
-| GET    | `/api/patients/me/prescription` | Patient | Get my prescriptions            |
-| GET    | `/api/patients/doctor`          | Patient | List all doctors                |
-| GET    | `/api/patients/doctor/:id`      | Patient | Get doctor details              |
-| GET    | `/api/patients/hospital`        | Patient | List all hospitals              |
-| GET    | `/api/patients/hospital/:id`    | Patient | Get hospital details            |
-
-### Doctors (`/api/doctor`)
-
-| Method | Endpoint                                | Auth   | Description                       |
-| ------ | --------------------------------------- | ------ | --------------------------------- |
-| GET    | `/api/doctor/public`                    | No     | List all doctors (public)         |
-| GET    | `/api/doctor/public/:id`                | No     | Doctor public profile             |
-| POST   | `/api/doctor/profile`                   | Doctor | Create doctor profile             |
-| GET    | `/api/doctor/profile`                   | Doctor | Get my profile                    |
-| PUT    | `/api/doctor/profile`                   | Doctor | Update my profile                 |
-| PUT    | `/api/doctor/profile/avatar`            | Doctor | Update avatar                     |
-| GET    | `/api/doctor/dashboard`                 | Doctor | Dashboard summary                 |
-| GET    | `/api/doctor/analytics`                 | Doctor | Analytics data                    |
-| GET    | `/api/doctor/availability`              | Doctor | Get availability slots            |
-| POST   | `/api/doctor/availability`              | Doctor | Add availability slots            |
-| PUT    | `/api/doctor/availability/:slotId`      | Doctor | Update availability slot          |
-| DELETE | `/api/doctor/availability/:slotId`      | Doctor | Delete availability slot          |
-| GET    | `/api/doctor/appointments`              | Doctor | List my appointments              |
-| PATCH  | `/api/doctor/appointments/:appointmentId`| Doctor | Update appointment status        |
-| DELETE | `/api/doctor/appointments/:appointmentId`| Doctor | Delete appointment               |
-| GET    | `/api/doctor/meetings`                  | Doctor | Get video call appointments       |
-| GET    | `/api/doctor/patients`                  | Doctor | List my patients                  |
-| GET    | `/api/doctor/patients/:patientId`       | Doctor | Get patient detail                |
-| POST   | `/api/doctor/records`                   | Doctor | Create medical record             |
-| GET    | `/api/doctor/records/:patientId`        | Doctor | Get records by patient            |
-| PUT    | `/api/doctor/records/:recordId`         | Doctor | Update medical record             |
-| POST   | `/api/doctor/prescriptions`             | Doctor | Save prescription                 |
-| POST   | `/api/doctor/prescriptions/generate`    | Doctor | Generate prescription PDF         |
-| GET    | `/api/doctor/prescriptions`             | Doctor | List prescriptions                |
-| GET    | `/api/doctor/prescriptions/download`    | Doctor | Download prescription PDF         |
-| GET    | `/api/doctor/ratings`                   | Doctor | View my ratings                   |
-
-### Admin (`/api/admin`)
-
-| Method | Endpoint                                 | Auth  | Description                        |
-| ------ | ---------------------------------------- | ----- | ---------------------------------- |
-| GET    | `/api/admin/users`                       | Admin | List all users                     |
-| POST   | `/api/admin/users`                       | Admin | Create a user                      |
-| PUT    | `/api/admin/users/:id`                   | Admin | Update user details                |
-| DELETE | `/api/admin/users/:id`                   | Admin | Delete a user                      |
-| PATCH  | `/api/admin/users/:id/status`            | Admin | Update user status                 |
-| PATCH  | `/api/admin/users/:id/toggle-status`     | Admin | Toggle active/inactive             |
-| POST   | `/api/admin/users/:id/reset-password`    | Admin | Reset user password                |
-| GET    | `/api/admin/doctors/pending`             | Admin | List pending doctor approvals      |
-| GET    | `/api/admin/appointments`                | Admin | List all appointments              |
-| POST   | `/api/admin/appointments/:id/meeting`    | Admin | Create meeting link                |
-| GET    | `/api/admin/stats`                       | Admin | Dashboard statistics               |
-| POST   | `/api/admin/reports/generate`            | Admin | Generate report (PDF/CSV/Excel)    |
-| GET    | `/api/admin/emergencies`                 | Admin | List emergencies                   |
-| GET    | `/api/admin/emergencies/:id`             | Admin | Get emergency by ID                |
-| PATCH  | `/api/admin/emergencies/:id/status`      | Admin | Update emergency status            |
-| GET    | `/api/admin/emergencies/:id/nearest-hospital` | Admin | Find nearest hospital        |
-
-### Emergency (`/api/emergency`)
-
-| Method | Endpoint                                  | Auth | Description                    |
-| ------ | ----------------------------------------- | ---- | ------------------------------ |
-| POST   | `/api/emergency`                          | No   | Create emergency case          |
-| GET    | `/api/emergency`                          | No   | List all emergencies           |
-| GET    | `/api/emergency/:id`                      | No   | Get emergency by ID            |
-| PATCH  | `/api/emergency/:id/status`               | No   | Update emergency status        |
-| GET    | `/api/emergency/:id/nearest-hospital`     | No   | Find nearest hospital          |
-
-### Hospitals (`/api/hospitals`)
-
-| Method | Endpoint              | Auth  | Description              |
-| ------ | --------------------- | ----- | ------------------------ |
-| GET    | `/api/hospitals`      | No    | List all hospitals       |
-| GET    | `/api/hospitals/:id`  | No    | Get hospital by ID       |
-| POST   | `/api/hospitals`      | Admin | Create hospital          |
-| DELETE | `/api/hospitals/:id`  | Admin | Delete hospital          |
-
-### Documents (`/api/documents`)
-
-| Method | Endpoint                         | Auth    | Description               |
-| ------ | -------------------------------- | ------- | ------------------------- |
-| POST   | `/api/documents`                 | Patient | Upload document           |
-| GET    | `/api/documents`                 | Patient | List my documents         |
-| DELETE | `/api/documents/:id`             | Patient | Soft-delete document      |
-| DELETE | `/api/documents/:id/permanent`   | Patient | Permanently delete        |
-
-### Users (`/api/users`)
-
-| Method | Endpoint          | Auth | Description       |
-| ------ | ----------------- | ---- | ----------------- |
-| GET    | `/api/users`      | No   | List all users    |
-| GET    | `/api/users/:id`  | No   | Get user by ID    |
-
----
-
-## Testing
-
-### Prerequisites
+### Running the tests
 
 ```bash
 cd server
-npm install   # Ensures test dependencies are installed
+npm test                                   # full backend suite
+npx jest tests/integration/security        # V3, V4, V6, V7, OAuth
+npx jest tests/unit/upload tests/integration/upload   # V8
+npm run test:appointment                   # appointment module (V1, V2)
+npm audit                                  # V10
+
+cd ../client
+node --test tests/pkce.test.mjs            # OAuth PKCE helpers
 ```
 
-### Unit Tests
+The tests use an in-memory MongoDB, and email, Cloudinary and Google are mocked. They need no `.env` values and contact no external service.
 
-Unit tests validate individual services, controllers, validators, and middleware in isolation using Jest and mocked dependencies.
+## 10. Environment Variables
 
-```bash
-# Run unit tests only
-npm run test:unit
-```
+Never commit `.env` files. Both are git-ignored, and each folder has a `.env.example` to copy. Only variable names are listed here.
 
-**Covered modules:**
-- Appointment: controller, service, validator, rating service
-- Payment: controller, service, validator, receipt PDF service
-- Middleware: auth, error handler, request validation
+**Server (`server/.env`)**
 
-### Integration Tests
+| Variable | Purpose |
+|---|---|
+| `PORT` | API port (default `1111`) |
+| `MONGO_URI` | MongoDB connection string |
+| `NODE_ENV` | `development` or `production` |
+| `CLIENT_URL` | Frontend origin (CORS) |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | JWT signing secrets (long, random, different from each other) |
+| `ACCESS_TOKEN_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` | Optional token lifetimes |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | File storage |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Email delivery |
+| `EMAIL_OVERRIDE_TO` | Development only: send all email to one address |
+| `GEMINI_API_KEY` | AI assistant |
+| `SMSLENZ_USER_ID`, `SMSLENZ_API_KEY`, `SMSLENZ_SENDER_ID` | SMS notifications |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (public) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. **Server only**: never put it in `client/` or in any `VITE_` variable. |
+| `GOOGLE_REDIRECT_URIS` | Comma-separated exact allowlist of redirect URIs, e.g. `http://localhost:5173/auth/google/callback` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used by the admin seed script |
 
-Integration tests verify end-to-end API behavior using Supertest with an in-memory MongoDB instance (`mongodb-memory-server`).
+**Client (`client/.env`)**
 
-```bash
-# Run integration tests only
-npm run test:integration
-```
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | Backend API base URL, e.g. `http://localhost:1111/api` |
+| `VITE_GROQ_API_KEY` | AI chat |
+| `VITE_GOOGLE_CLIENT_ID` | Same public Google client ID as the server |
+| `VITE_GOOGLE_REDIRECT_URI` | Must be one of `GOOGLE_REDIRECT_URIS` |
 
-**Covered modules:**
-- Appointment CRUD & status transitions
-- Appointment rating system
-- Chat message history & access control
-- Payment creation, verification & receipt generation
+In Google Cloud Console, create an OAuth client of type **Web application**. Add `http://localhost:5173/auth/google/callback` (and the deployed URL) as an authorised redirect URI.
 
-### Run All Tests
+## 11. Known Limitations
 
-```bash
-npm test
-```
+**Planned but not fixed**
 
-**Current status: 190 tests passing across 16 test suites.**
+- **V5 – Internal Error Leakage.** The upload error handler in `server.js` still returns `err.message` with status `500`. It runs before the global error handler, so many client errors appear as `500` with the internal message. Payment errors are handled separately (V3).
+- **V9 – Improper Input Validation / Regex.** Search endpoints (documents, patient doctor/hospital search, admin search) pass user input directly into MongoDB `$regex` without escaping it (ReDoS / regex injection).
+- **V11 – Reactivation Bypass.** `reactivateAccount` sets `status = "ACTIVE"` whenever the password matches. A pending or rejected doctor, or an admin-suspended user, can therefore reactivate their own account. V7 limits how often this can be attempted but does not fix the logic.
 
-### Doctor Dashboard Module
+**Residual risks of the fixes**
 
-| Command                           | Description                                       |
-| --------------------------------- | ------------------------------------------------- |
-| `npm run test:doctor`             | Run all doctor tests (unit + integration)         |
-| `npm run test:doctor:unit`        | Doctor unit tests only (service + controller)     |
-| `npm run test:doctor:integration` | Doctor integration tests only (API endpoints)     |
-| `npm run test:doctor:perf`        | Artillery.io performance / load test              |
-| `npm run test:doctor:perf:report` | Performance test with JSON report generation      |
+- **Appointments:** responses still populate the full patient and doctor `User` documents, including `passwordHash` and `refreshTokenHash`. After V1, only the two participants can see an appointment, but each still receives the other's hashes. The populated fields should be restricted.
+- **V3:**
+  - A patient can mark their own (simulated) payment as verified.
+  - Any logged-in user can see doctors' email addresses.
+- **V4:** authorization is checked when a socket joins a room. A socket that is already connected keeps its room until it disconnects, even if the account or appointment later changes.
+- **V6:** `POST /register` still reveals when an email is already taken; this was accepted for usability. OTPs are stored as unsalted SHA-256.
+- **V7:** the limit is per IP only, with in-memory counters. `trust proxy` is not configured for deployment behind a reverse proxy.
+- **V8:** the magic-byte check proves the file type; it does not scan for malware.
+- **V10:** only the server dependencies were in scope. Mongoose is held at 9.7.x because newer versions break the in-memory test setup. `npm audit` only covers known advisories, so it should be re-run before each release.
+- **OAuth:**
+  - Suspension is only rechecked at login, as with password login.
+  - A linked user's email is not updated if it changes at Google.
+  - The manual end-to-end walkthrough with a real Google client (consent screen, network trace) is listed as outstanding in the OAuth evidence.
 
-> **Note:** For performance tests, the server must be running (`npm run dev`) and you need to replace `<DOCTOR_JWT_TOKEN>` in `tests/artillery/doctor-load-test.yml` with a valid JWT.
+**Test suites that were already failing.** In the full backend suite (`npm test`), 446 of 495 tests pass. 8 suites fail (49 tests): admin (unit and integration), patient (unit and integration), doctor controller, and the appointment model, integration and validator suites. These failures predate the security work; the V8 and V10 evidence records these suites failing before those changes. Causes include incomplete test fixtures (missing required fields), hard-coded dates that are now in the past, and a wrong import path. No security change introduced a new failure. The V1 change fixed one suite that was previously failing (appointment service).
 
-### Test Summary (Doctor Dashboard)
+## 12. Demonstration Video
 
-| Type                 | Tests        | Framework                            |
-| -------------------- | ------------ | ------------------------------------ |
-| Unit – Service       | 39           | Jest + MongoMemoryServer             |
-| Unit – Controller    | 24           | Jest (mocked service layer)          |
-| Integration – API    | 35           | Jest + Supertest + MongoMemoryServer |
-| Performance          | 12 scenarios | Artillery.io (4 load phases)         |
-| **Total**            | **98**       |                                      |
-
-**Test coverage includes:** appointment controller/service/validator, payment controller/service/validator, auth middleware, error handler, chat integration, doctor dashboard (profile, availability, appointments, patients, medical records, prescriptions, ratings, analytics, meetings, account management), and Artillery load testing.
-
-### Performance Testing
-
-Performance tests use [Artillery.io](https://artillery.io) to evaluate API response times under load.
-
-```bash
-# Install Artillery globally (if not already)
-npm install -g artillery
-
-# Start the server first
-npm run dev
-
-# Generate fresh JWT tokens for authenticated testing
-node -e "
-  require('dotenv').config();
-  const jwt = require('jsonwebtoken');
-  const token = jwt.sign(
-    { userId: '<PATIENT_USER_ID>', role: 'patient' },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: '1h' }
-  );
-  console.log(token);
-"
-
-# Set tokens as environment variables and run load test
-ARTILLERY_PATIENT_TOKEN="<patient_jwt>" \
-ARTILLERY_DOCTOR_TOKEN="<doctor_jwt>" \
-artillery run tests/artillery/load-test.yml
-```
-
-**Load test configuration** (`tests/artillery/load-test.yml`):
-
-| Phase     | Duration | Arrival Rate | Description                     |
-| --------- | -------- | ------------ | ------------------------------- |
-| Warm up   | 30s      | 5 req/s      | Baseline load                   |
-| Ramp up   | 60s      | 20 req/s     | Stress test with increased load |
-| Cool down | 30s      | 5 req/s      | Recovery phase                  |
-
-**Tested scenarios (15 weighted scenarios):**
-
-| Category              | Scenarios                                      | Auth         |
-| --------------------- | ---------------------------------------------- | ------------ |
-| Public                | List users, List doctors, List hospitals       | No           |
-| Patient: Appointments | List, Stats, Create & Cancel, Filter by status | JWT (patient)|
-| Patient: Chat         | Message history, Unread count, Inbox           | JWT (patient)|
-| Patient: Payments     | Get payment by appointment                     | JWT (patient)|
-| Doctor                | List appointments, Dashboard, List patients    | JWT (doctor) |
-
-### Test Environment Configuration
-
-- Tests use `mongodb-memory-server` — no external database required
-- JWT secrets are set inline within test files
-- Email service is mocked in tests (no real emails sent)
-- Cloudinary is mocked for upload tests
-- All tests run with `npx jest` (configured in `package.json`)
+https://youtu.be/RUGYF3S98M
 
 ---
 
-## Deployment
-
-### Backend Deployment (Render)
-
-1. Create a new **Web Service** on [Render](https://render.com)
-2. Connect your GitHub repository
-3. Configure:
-   - **Root Directory:** `server`
-   - **Build Command:** `npm install`
-   - **Start Command:** `node server.js`
-4. Add all environment variables from `server/.env.example` in the Render dashboard
-5. Set `CLIENT_URL` to your deployed frontend URL
-6. Set `NODE_ENV` to `production`
-
-### Frontend Deployment (Vercel)
-
-1. Import your repository on [Vercel](https://vercel.com)
-2. Configure:
-   - **Root Directory:** `client`
-   - **Framework Preset:** Vite
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-3. Add environment variables:
-   - `VITE_API_URL` = your deployed backend URL (e.g. `https://careline360-api.onrender.com/api`)
-   - `VITE_GROQ_API_KEY` = your Groq API key
-
-### Environment Variables (Production)
-
-> Never expose secret values. Use your hosting platform's environment variable settings.
-
-**Required for backend:**
-`PORT`, `MONGO_URI`, `NODE_ENV`, `CLIENT_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `GEMINI_API_KEY`
-
-**Optional for backend:**
-`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `SMSLENZ_USER_ID`, `SMSLENZ_API_KEY`
-
-**Required for frontend:**
-`VITE_API_URL`, `VITE_GROQ_API_KEY`
-
----
-
-## Contributors
-
-> **SLIIT** | Year 3 Semester 2 — Application Frameworks Module
-> **Group ID:** Y3S2-SE-80
-
-| Name          | Student ID | Component                       |
-| ------------- | ---------- | ------------------------------- |
-| K. Vanayalini | IT23193840 | Emergency & Hospital Management |
-| T. Thuvarekan | IT23281332 | Doctor Management               |
-| B. Clarin     | IT23402584 | Admin Dashboard                 |
-| G. Shajana    | IT23164208 | Appointment & Consultation      |
-
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
+The original CareLine360 application was developed by its original authors. This repository is a security-hardened copy produced for SE4030 coursework by Group 60.
