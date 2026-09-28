@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Patient = require("../models/Patient");
@@ -6,6 +7,22 @@ const Otp = require("../models/Otp");
 const { sendEmail } = require("./emailService");
 const { generateOtp, hashOtp } = require("../utils/otp");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/tokens");
+const { verifyPassword } = require("../utils/password");
+
+// Same answer whether or not the account exists (CWE-203/204)
+const VERIFY_OTP_SENT = { status: 200, data: { message: "If the account exists and is not yet verified, a verification code has been sent." } };
+const RESET_OTP_SENT = { status: 200, data: { message: "If the account exists, a password reset code has been sent." } };
+const OTP_NOT_FOUND = { status: 400, data: { message: "OTP not found or expired" } };
+
+// Not awaited, so response time does not depend on whether an email was sent
+const sendEmailInBackground = (mail) =>
+  Promise.resolve()
+    .then(() => sendEmail(mail))
+    .catch((e) => console.error("Email send error:", e?.message));
+
+// bcrypt reads only the first 72 bytes, which every refresh token of a user
+// shares (JWT header + userId). Hashing a SHA-256 digest makes the whole token count.
+const refreshTokenDigest = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
 
 const getNextPatientId = async () => {
   const counter = await Counter.findOneAndUpdate(
@@ -59,9 +76,9 @@ const registerUser = async ({ identifier, password, fullName, role }) => {
   await Patient.create({ userId: user._id, patientId, fullName });
 
   const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
-  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role });
+  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role, jti: crypto.randomUUID() });
 
-  user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  user.refreshTokenHash = await bcrypt.hash(refreshTokenDigest(refreshToken), 10);
   await user.save();
 
   return {
@@ -85,11 +102,20 @@ const loginUser = async ({ identifier, password }) => {
     : { phone: rawIdentifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 401, data: { message: "Invalid credentials" } };
-  if (!user.isActive) return { status: 403, data: { message: "Account is deactivated" } };
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  // Password first: account state is only revealed to someone who knows it
+  const ok = await verifyPassword(user, password);
   if (!ok) return { status: 401, data: { message: "Invalid credentials" } };
+
+  const blocked = accountStateError(user);
+  if (blocked) return blocked;
+
+  return issueSession(user);
+};
+
+// 403 result when the account may not sign in, otherwise null
+const accountStateError = (user) => {
+  if (!user.isActive) return { status: 403, data: { message: "Account is deactivated" } };
 
   // Option A: block login unless ACTIVE
   if (user.status !== "ACTIVE") {
@@ -100,12 +126,18 @@ const loginUser = async ({ identifier, password }) => {
     return { status: 403, data: { message: msg, status: user.status } };
   }
 
+  return null;
+};
+
+// Signs a new access/refresh pair and stores the refresh token hash (one session per user)
+const issueSession = async (user) => {
   user.lastLoginAt = new Date();
 
   const accessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
-  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role });
+  // jti makes every refresh token unique, even two issued in the same second
+  const refreshToken = signRefreshToken({ userId: user._id.toString(), role: user.role, jti: crypto.randomUUID() });
 
-  user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+  user.refreshTokenHash = await bcrypt.hash(refreshTokenDigest(refreshToken), 10);
   await user.save();
 
   return {
@@ -126,7 +158,7 @@ const refreshAccessToken = async ({ refreshToken }) => {
     const user = await User.findById(decoded.userId);
     if (!user || !user.isActive) return { status: 401, data: { message: "Invalid refresh token" } };
 
-    const match = await bcrypt.compare(refreshToken, user.refreshTokenHash || "");
+    const match = await bcrypt.compare(refreshTokenDigest(refreshToken), user.refreshTokenHash || "");
     if (!match) return { status: 401, data: { message: "Invalid refresh token" } };
 
     const newAccessToken = signAccessToken({ userId: user._id.toString(), role: user.role });
@@ -147,10 +179,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
-
-  if (!user.email) return { status: 400, data: { message: "Email not available for this account" } };
-  if (user.isVerified) return { status: 200, data: { message: "Email already verified" } };
+  if (!user || !user.email || user.isVerified) return VERIFY_OTP_SENT;
 
   // remove old OTPs for this purpose
   await Otp.deleteMany({ userId: user._id, purpose: "EMAIL_VERIFY" });
@@ -164,7 +193,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     attemptsLeft: 5,
   });
 
-  await sendEmail({
+  sendEmailInBackground({
     to: user.email,
     subject: `${process.env.APP_NAME || "CareLine360"} - Verify your email`,
     html: `
@@ -174,7 +203,7 @@ const sendEmailVerificationOtp = async ({ identifier }) => {
     `,
   });
 
-  return { status: 200, data: { message: "Verification OTP sent to email" } };
+  return VERIFY_OTP_SENT;
 };
 
 const verifyEmailOtp = async ({ identifier, otp }) => {
@@ -183,10 +212,10 @@ const verifyEmailOtp = async ({ identifier, otp }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
+  if (!user) return OTP_NOT_FOUND;
 
   const record = await Otp.findOne({ userId: user._id, purpose: "EMAIL_VERIFY" });
-  if (!record) return { status: 400, data: { message: "OTP not found or expired" } };
+  if (!record) return OTP_NOT_FOUND;
 
   if (record.expiresAt < new Date()) {
     await Otp.deleteOne({ _id: record._id });
@@ -218,9 +247,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
-
-  if (!user.email) return { status: 400, data: { message: "Email not available for this account" } };
+  if (!user || !user.email) return RESET_OTP_SENT;
 
   await Otp.deleteMany({ userId: user._id, purpose: "PASSWORD_RESET" });
 
@@ -233,7 +260,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     attemptsLeft: 5,
   });
 
-  await sendEmail({
+  sendEmailInBackground({
     to: user.email,
     subject: `${process.env.APP_NAME || "CareLine360"} - Password reset`,
     html: `
@@ -243,7 +270,7 @@ const sendPasswordResetOtp = async ({ identifier }) => {
     `,
   });
 
-  return { status: 200, data: { message: "Password reset OTP sent to email" } };
+  return RESET_OTP_SENT;
 };
 
 const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
@@ -252,10 +279,10 @@ const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
     : { phone: identifier };
 
   const user = await User.findOne(query);
-  if (!user) return { status: 404, data: { message: "User not found" } };
+  if (!user) return OTP_NOT_FOUND;
 
   const record = await Otp.findOne({ userId: user._id, purpose: "PASSWORD_RESET" });
-  if (!record) return { status: 400, data: { message: "OTP not found or expired" } };
+  if (!record) return OTP_NOT_FOUND;
 
   if (record.expiresAt < new Date()) {
     await Otp.deleteOne({ _id: record._id });
@@ -287,6 +314,9 @@ const resetPasswordWithOtp = async ({ identifier, otp, newPassword }) => {
 
 
 module.exports = {
+  getNextPatientId,
+  accountStateError,
+  issueSession,
   registerUser,
   loginUser,
   refreshAccessToken,

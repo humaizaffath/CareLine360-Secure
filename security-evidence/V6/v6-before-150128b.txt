@@ -1,0 +1,107 @@
+# V6 BEFORE evidence — captured 2026-09-26 14:38:22 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+150128b
+$ cd server && npx jest tests/integration/security/v6-enumeration-otp.test.js --verbose
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+FAIL tests/integration/security/v6-enumeration-otp.test.js
+  V6: account enumeration
+    × POST /api/auth/password/forgot answers the same for known and unknown accounts (103 ms)
+    × POST /api/auth/reactivate answers the same for a known account and an unknown account with a wrong password (88 ms)
+  V6: OTP generation
+    × generateOtp() does not use Math.random() (2 ms)
+    √ positive control: generateOtp() always returns a six-digit code (31 ms)
+
+  ● V6: account enumeration › POST /api/auth/password/forgot answers the same for known and unknown accounts
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "body": Object {
+    -     "message": "Password reset OTP sent to email",
+    +     "message": "User not found",
+        },
+    -   "status": 200,
+    +   "status": 404,
+      }
+
+      69 |     const unknown = await request(app).post("/api/auth/password/forgot").send({ identifier: UNKNOWN_EMAIL });
+      70 |
+    > 71 |     expect(outward(unknown)).toEqual(outward(known));
+         |                              ^
+      72 |   });
+      73 |
+      74 |   it("POST /api/auth/reactivate answers the same for a known account and an unknown account with a wrong password", async () => {
+
+      at Object.toEqual (tests/integration/security/v6-enumeration-otp.test.js:71:30)
+
+  ● V6: account enumeration › POST /api/auth/reactivate answers the same for a known account and an unknown account with a wrong password
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "body": Object {
+    -     "message": "Invalid credentials",
+    +     "message": "User not found",
+        },
+    -   "status": 401,
+    +   "status": 404,
+      }
+
+      80 |       .send({ identifier: UNKNOWN_EMAIL, password: WRONG_PASSWORD });
+      81 |
+    > 82 |     expect(outward(unknown)).toEqual(outward(known));
+         |                              ^
+      83 |   });
+      84 | });
+      85 |
+
+      at Object.toEqual (tests/integration/security/v6-enumeration-otp.test.js:82:30)
+
+  ● V6: OTP generation › generateOtp() does not use Math.random()
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "mathRandomCalls": 0,
+    -   "otp": StringNotMatching /^550000$/,
+    +   "mathRandomCalls": 1,
+    +   "otp": "550000",
+      }
+
+      93 |
+      94 |     // With Math.random pinned to 0.5, a Math.random-based OTP is always "550000"
+    > 95 |     expect({ mathRandomCalls: spy.mock.calls.length, otp }).toEqual({
+         |                                                             ^
+      96 |       mathRandomCalls: 0,
+      97 |       otp: expect.not.stringMatching(/^550000$/),
+      98 |     });
+
+      at Object.toEqual (tests/integration/security/v6-enumeration-otp.test.js:95:61)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 1 passed, 4 total
+Snapshots:   0 total
+Time:        2.513 s, estimated 51 s
+Ran all test suites matching tests/integration/security/v6-enumeration-otp.test.js.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+[jest exit code: 1]

@@ -1,0 +1,71 @@
+# V6 AFTER evidence — captured 2026-09-26 16:52:13 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+f730ad2
+# Working tree = HEAD + uncommitted V6 fix:
+$ git diff --stat -- server/utils server/services server/controllers
+ server/controllers/patientController.js |  7 +++---
+ server/services/authService.js          | 43 +++++++++++++++++++--------------
+ server/utils/otp.js                     |  3 ++-
+ 3 files changed, 30 insertions(+), 23 deletions(-)
+$ git status --short -- server/utils
+ M server/utils/otp.js
+?? server/utils/password.js
+$ cd server && npx jest tests/integration/security/v6-enumeration-otp.test.js --verbose
+  console.log
+    🧪 Test environment initialized
+
+      at Object.log (tests/setup.js:270:11)
+
+  console.error
+    Email send error: undefined
+
+      18 |   Promise.resolve()
+      19 |     .then(() => sendEmail(mail))
+    > 20 |     .catch((e) => console.error("Email send error:", e?.message));
+         |                           ^
+      21 |
+      22 | const getNextPatientId = async () => {
+      23 |   const counter = await Counter.findOneAndUpdate(
+
+      at error (services/authService.js:20:27)
+
+  console.log
+    🧹 Test environment cleaned up
+
+      at Object.log (tests/setup.js:275:11)
+
+PASS tests/integration/security/v6-enumeration-otp.test.js
+  V6: account enumeration
+    √ POST /password/forgot answers the same for known and unknown accounts (155 ms)
+    √ POST /reactivate answers the same 401 for a known account with a wrong password and an unknown account (209 ms)
+    √ POST /password/reset for an unknown account does not reveal 'User not found' (20 ms)
+    √ POST /email/verify-otp for an unknown account does not reveal 'User not found' (19 ms)
+    √ POST /email/send-verify-otp answers the same for unknown, unverified and already-verified accounts (22 ms)
+    √ POST /login with a wrong password returns the same 401 for a deactivated account and an unknown account (167 ms)
+    √ POST /login reveals deactivation (403) only after the correct password (89 ms)
+  V6: forgot-password side effects
+    √ creates a hashed 10-minute OTP with attemptsLeft = 5 and emails it for an existing account (15 ms)
+    √ creates no OTP and sends no email for an unknown account (19 ms)
+    √ a failing email send is handled and does not cause an unhandled rejection (13 ms)
+  V6: password check
+    √ rejects a non-string password even when it wraps the correct one (84 ms)
+  V6: OTP generation
+    √ generateOtp() does not use Math.random() (2 ms)
+    √ generateOtp() draws from crypto.randomInt over the full 000000-999999 range (2 ms)
+    √ positive: leading zeros are kept (1 ms)
+    √ positive: 1000 generated OTPs all match /^\d{6}$/ (45 ms)
+  V6: positive flows
+    √ forgot password → emailed OTP → reset → login with the new password (392 ms)
+    √ send verify OTP → emailed OTP → verify marks the account verified (22 ms)
+    √ wrong OTPs still exhaust attemptsLeft and then return 429 (69 ms)
+    √ reactivate with the correct password restores a deactivated account, then login succeeds (241 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       19 passed, 19 total
+Snapshots:   0 total
+Time:        4.547 s
+Ran all test suites matching tests/integration/security/v6-enumeration-otp.test.js.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+[jest exit code: 0]

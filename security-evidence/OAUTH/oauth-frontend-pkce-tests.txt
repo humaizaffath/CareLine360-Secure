@@ -1,0 +1,54 @@
+# OAuth frontend PKCE/state tests — captured 2026-09-27 08:03:18 UTC
+$ git branch --show-current
+inaam/v6-v7-oauth
+$ git rev-parse --short HEAD
+aad24c0
+# Code under test: committed HEAD aad24c0 (backend 2e6de87, 2d06bcb, 44c667a; frontend aad24c0). Only security-evidence/OAUTH/ is uncommitted.
+$ node --version
+v22.14.0
+$ cd client && node --test --test-reporter=spec tests/pkce.test.mjs
+▶ random values
+  ✔ 1. code_verifier is 43-128 valid PKCE characters and unique (14.0981ms)
+  ✔ 2. state is non-empty and random (43 base64url chars = 256 bits) (5.2924ms)
+  ✔ 3. nonce is non-empty and random (43 base64url chars = 256 bits) (2.9641ms)
+  ✔ never uses Math.random() (11.5444ms)
+✔ random values (35.8089ms)
+▶ S256 code challenge
+  ✔ 4. matches the RFC 7636 Appendix B test vector (2.4159ms)
+  ✔ base64url encoding has no padding or +/ characters (0.5566ms)
+✔ S256 code challenge (3.4652ms)
+▶ Google authorization URL
+  ✔ 5. has the required OIDC + PKCE parameters and nothing more (7.5436ms)
+  ✔ 6. contains no client secret and not the verifier itself (1.5924ms)
+  ✔ buildGoogleAuthUrl encodes values safely (0.7365ms)
+✔ Google authorization URL (10.4012ms)
+▶ single-use transaction
+  ✔ the transaction is kept in the given storage under the careline_google_* keys (2.694ms)
+  ✔ 7. a valid state is consumed once and returns the nonce and verifier (0.6053ms)
+  ✔ 8. replay after consume fails (0.303ms)
+  ✔ 9. tampered state is rejected (0.3399ms)
+  ✔ 10. transaction is cleared after a tampered or missing state (0.4175ms)
+  ✔ no stored transaction (e.g. a callback opened in another tab) is rejected (0.2672ms)
+✔ single-use transaction (5.0818ms)
+▶ O-4 / O-10 callback validation
+  ✔ valid callback → ok with code, nonce and verifier; transaction consumed (4.0319ms)
+  ✔ O-4 tampered state → not ok (no backend call), transaction cleared (2.585ms)
+  ✔ O-4 replaying the same callback URL → not ok (verifier already gone) (1.5724ms)
+  ✔ O-10 ?error=access_denied → not ok, transaction cleared (1.8425ms)
+  ✔ O-10 other Google error → not ok, transaction cleared (1.2592ms)
+  ✔ O-10 missing code or state → not ok, transaction cleared (1.1732ms)
+✔ O-4 / O-10 callback validation (13.0039ms)
+▶ O-4 GoogleCallback.jsx calls the backend only after validation
+  ✔ validation and the early return come before the single api.post (0.3346ms)
+  ✔ uses a useRef guard, the plain API client and useAuth().login (0.2158ms)
+  ✔ the verifier, nonce and code are sent only from the validated result (0.2295ms)
+✔ O-4 GoogleCallback.jsx calls the backend only after validation (0.9166ms)
+ℹ tests 24
+ℹ suites 6
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 247.2896
+[node --test exit code: 0]

@@ -11,6 +11,7 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 import logo from "../assets/logo.png";
 import loginImg from "../assets/images/login.png";
@@ -246,6 +247,8 @@ export default function Login() {
             <span className="auth-divider-text">or</span>
             <span className="auth-divider-line" />
           </div>
+
+          <GoogleSignInButton />
 
           {/* Footer */}
           <div className="auth-footer-links">
