@@ -51,6 +51,27 @@ const pickFields = (data, allowed) => {
   return picked;
 };
 
+// SECURITY (V1): IDOR / BOLA mitigation – CWE-639 / OWASP A01:2021.
+// Previously every /:id operation loaded the appointment by id alone, so any
+// authenticated user could read, edit, cancel or delete someone else's appointment.
+// `user` is req.user (set by authMiddleware from the verified JWT), never the body.
+// `parties` lists which side of the appointment may perform the action. A mismatch
+// returns the same 404 as a missing appointment so ids cannot be probed.
+const assertParticipant = (appointment, user, parties) => {
+  const userId = user?.userId?.toString();
+  const allowed = parties.some((party) => {
+    const ref = appointment[party];
+    const ownerId = (ref?._id ?? ref)?.toString();
+    return !!userId && ownerId === userId;
+  });
+
+  if (!allowed) {
+    const error = new Error("Appointment not found");
+    error.statusCode = 404;
+    throw error;
+  }
+};
+
 const checkDoubleBooking = async (doctorId, date, time, excludeId = null) => {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
@@ -96,7 +117,7 @@ const createAppointment = async (body, patientId) => {
   return populated;
 };
 
-const getAppointments = async (filters = {}) => {
+const getAppointments = async (filters = {}, user) => {
   const {
     status, doctor, patient, dateFrom, dateTo,
     page = 1, limit = 10, sort = "-createdAt",
@@ -110,6 +131,18 @@ const getAppointments = async (filters = {}) => {
   }
   if (doctor) query.doctor = doctor;
   if (patient) query.patient = patient;
+
+  // SECURITY (V1): scope the list to the authenticated user instead of trusting
+  // the client-supplied patient/doctor query params. Admins keep full access.
+  if (user?.role === "patient") {
+    query.patient = user.userId;
+  } else if (user?.role === "doctor") {
+    query.doctor = user.userId;
+  } else if (user?.role !== "admin") {
+    const error = new Error("Forbidden: role not allowed");
+    error.statusCode = 403;
+    throw error;
+  }
   if (dateFrom || dateTo) {
     query.date = {};
     if (dateFrom) query.date.$gte = new Date(dateFrom);
@@ -136,13 +169,15 @@ const getAppointments = async (filters = {}) => {
   };
 };
 
-const getAppointmentById = async (id) => {
+const getAppointmentById = async (id, user) => {
   const appointment = await Appointment.findById(id).populate("patient doctor").lean();
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["patient", "doctor"]);
 
   // Enrich with Doctor profile (fullName, specialization, avatarUrl) from Doctor model
   if (appointment.doctor?._id) {
@@ -158,7 +193,7 @@ const getAppointmentById = async (id) => {
   return appointment;
 };
 
-const updateAppointment = async (id, body) => {
+const updateAppointment = async (id, body, user) => {
   // SECURITY (V2): only allow-listed fields are passed to Object.assign below.
   const data = pickFields(body, UPDATE_FIELDS);
   const appointment = await Appointment.findById(id);
@@ -167,6 +202,8 @@ const updateAppointment = async (id, body) => {
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["patient"]);
 
   if (appointment.status !== "pending") {
     const error = new Error("Can only update pending appointments");
@@ -188,13 +225,15 @@ const updateAppointment = async (id, body) => {
   return appointment.populate("patient doctor");
 };
 
-const deleteAppointment = async (id) => {
+const deleteAppointment = async (id, user) => {
   const appointment = await Appointment.findById(id);
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["patient", "doctor"]);
 
   if (appointment.status !== "pending") {
     const error = new Error("Can only delete pending appointments");
@@ -206,13 +245,15 @@ const deleteAppointment = async (id) => {
   return { message: "Appointment deleted" };
 };
 
-const transitionStatus = async (id, newStatus) => {
+const transitionStatus = async (id, newStatus, user) => {
   const appointment = await Appointment.findById(id).populate("patient doctor");
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["doctor"]);
 
   const allowed = VALID_TRANSITIONS[appointment.status];
   if (!allowed || !allowed.includes(newStatus)) {
@@ -237,13 +278,15 @@ const transitionStatus = async (id, newStatus) => {
   return appointment;
 };
 
-const rescheduleAppointment = async (id, newDate, newTime) => {
+const rescheduleAppointment = async (id, newDate, newTime, user) => {
   const appointment = await Appointment.findById(id).populate("patient doctor");
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["patient", "doctor"]);
 
   if (appointment.status !== "confirmed") {
     const error = new Error("Can only reschedule confirmed appointments");
@@ -277,13 +320,15 @@ const rescheduleAppointment = async (id, newDate, newTime) => {
   return appointment;
 };
 
-const cancelAppointment = async (id, reason) => {
+const cancelAppointment = async (id, reason, user) => {
   const appointment = await Appointment.findById(id).populate("patient doctor");
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  assertParticipant(appointment, user, ["patient", "doctor"]);
 
   if (appointment.status === "completed" || appointment.status === "cancelled") {
     const error = new Error("Cannot cancel a completed or already cancelled appointment");

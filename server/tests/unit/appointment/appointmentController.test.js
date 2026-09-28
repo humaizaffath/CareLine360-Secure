@@ -54,7 +54,7 @@ describe("Appointment Controller", () => {
 
   describe("getAppointments", () => {
     it("should return appointments with pagination", async () => {
-      const req = { query: { status: "pending" } };
+      const req = { query: { status: "pending" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -63,6 +63,8 @@ describe("Appointment Controller", () => {
 
       await controller.getAppointments(req, res, next);
 
+      // SECURITY (V1): the authenticated user is forwarded so the service can scope the list.
+      expect(appointmentService.getAppointments).toHaveBeenCalledWith({ status: "pending" }, req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, ...mockResult });
     });
 
@@ -84,7 +86,7 @@ describe("Appointment Controller", () => {
 
   describe("getAppointmentById", () => {
     it("should return appointment by ID", async () => {
-      const req = { params: { id: "appt1" } };
+      const req = { params: { id: "appt1" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -93,6 +95,8 @@ describe("Appointment Controller", () => {
 
       await controller.getAppointmentById(req, res, next);
 
+      // SECURITY (V1): ownership is checked against req.user, not a client-supplied id.
+      expect(appointmentService.getAppointmentById).toHaveBeenCalledWith("appt1", req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });
 
@@ -114,7 +118,7 @@ describe("Appointment Controller", () => {
 
   describe("updateAppointment", () => {
     it("should update and return the appointment", async () => {
-      const req = { params: { id: "appt1" }, body: { symptoms: "updated" } };
+      const req = { params: { id: "appt1" }, body: { symptoms: "updated" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -123,7 +127,7 @@ describe("Appointment Controller", () => {
 
       await controller.updateAppointment(req, res, next);
 
-      expect(appointmentService.updateAppointment).toHaveBeenCalledWith("appt1", { symptoms: "updated" });
+      expect(appointmentService.updateAppointment).toHaveBeenCalledWith("appt1", { symptoms: "updated" }, req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });
 
@@ -145,7 +149,7 @@ describe("Appointment Controller", () => {
 
   describe("deleteAppointment", () => {
     it("should delete and return success message", async () => {
-      const req = { params: { id: "appt1" } };
+      const req = { params: { id: "appt1" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -153,6 +157,7 @@ describe("Appointment Controller", () => {
 
       await controller.deleteAppointment(req, res, next);
 
+      expect(appointmentService.deleteAppointment).toHaveBeenCalledWith("appt1", req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, message: "Appointment deleted" });
     });
 
@@ -174,7 +179,7 @@ describe("Appointment Controller", () => {
 
   describe("transitionStatus", () => {
     it("should transition status and return result", async () => {
-      const req = { params: { id: "appt1" }, body: { status: "confirmed" } };
+      const req = { params: { id: "appt1" }, body: { status: "confirmed" }, user: { userId: "doc1", role: "doctor" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -183,7 +188,7 @@ describe("Appointment Controller", () => {
 
       await controller.transitionStatus(req, res, next);
 
-      expect(appointmentService.transitionStatus).toHaveBeenCalledWith("appt1", "confirmed");
+      expect(appointmentService.transitionStatus).toHaveBeenCalledWith("appt1", "confirmed", req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });
 
@@ -205,7 +210,7 @@ describe("Appointment Controller", () => {
 
   describe("rescheduleAppointment", () => {
     it("should reschedule and return result", async () => {
-      const req = { params: { id: "appt1" }, body: { date: "2026-05-01", time: "14:00" } };
+      const req = { params: { id: "appt1" }, body: { date: "2026-05-01", time: "14:00" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -214,7 +219,7 @@ describe("Appointment Controller", () => {
 
       await controller.rescheduleAppointment(req, res, next);
 
-      expect(appointmentService.rescheduleAppointment).toHaveBeenCalledWith("appt1", "2026-05-01", "14:00");
+      expect(appointmentService.rescheduleAppointment).toHaveBeenCalledWith("appt1", "2026-05-01", "14:00", req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });
 
@@ -236,7 +241,7 @@ describe("Appointment Controller", () => {
 
   describe("cancelAppointment", () => {
     it("should cancel and return result", async () => {
-      const req = { params: { id: "appt1" }, body: { reason: "conflict" } };
+      const req = { params: { id: "appt1" }, body: { reason: "conflict" }, user: { userId: "user123", role: "patient" } };
       const res = mockRes();
       const next = jest.fn();
 
@@ -245,7 +250,7 @@ describe("Appointment Controller", () => {
 
       await controller.cancelAppointment(req, res, next);
 
-      expect(appointmentService.cancelAppointment).toHaveBeenCalledWith("appt1", "conflict");
+      expect(appointmentService.cancelAppointment).toHaveBeenCalledWith("appt1", "conflict", req.user);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockAppt });
     });
 
