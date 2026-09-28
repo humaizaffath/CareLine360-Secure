@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-09-26T07:04:04.883Z",
+  "node": "v26.9.0",
+  "versions": {
+    "nodemailer": "9.1.1",
+    "cloudinary": "2.11.0",
+    "mongoose": "9.7.4",
+    "mongodb": "7.6.0",
+    "express": "5.2.1",
+    "multer": "2.4.0",
+    "socket.io": "4.8.3"
+  },
+  "results": [
+    {
+      "check": "server.js starts and connects to MongoDB",
+      "pass": true
+    },
+    {
+      "check": "GET / responds",
+      "pass": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "check": "register patient",
+      "pass": true,
+      "detail": {
+        "status": 201
+      }
+    },
+    {
+      "check": "login returns access token",
+      "pass": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "check": "authenticated /api/auth/me",
+      "pass": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "check": "unauthenticated /api/auth/me rejected",
+      "pass": true,
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "check": "genuine PDF document upload succeeds via cloudinary 2.x",
+      "pass": true,
+      "detail": {
+        "status": 201,
+        "cloudinaryRequest": {
+          "method": "POST",
+          "url": "/v1_1/smoke/auto/upload",
+          "bytes": 484
+        }
+      }
+    },
+    {
+      "check": "spoofed PDF still rejected before Cloudinary (V8 intact)",
+      "pass": true,
+      "detail": {
+        "status": 400
+      }
+    },
+    {
+      "check": "genuine PNG avatar reaches cloudinary 2.x image upload",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "cloudinaryRequest": {
+          "method": "POST",
+          "url": "/v1_1/smoke/image/upload",
+          "bytes": 668
+        }
+      }
+    },
+    {
+      "check": "emailService sends via nodemailer 9.x SMTP",
+      "pass": true,
+      "detail": {
+        "messageId": "<f0665561-6b56-af29-d25a-30137ecb5da1@careline360.test>"
+      }
+    }
+  ]
+}
